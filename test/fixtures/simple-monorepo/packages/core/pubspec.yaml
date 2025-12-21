@@ -1,0 +1,17 @@
+name: core
+description: Core business logic package
+version: 1.0.0
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+dependencies:
+  shared:
+    path: ../shared
+  equatable: ^2.0.5
+
+dev_dependencies:
+  test: ^1.24.0
+  lints: ^3.0.0

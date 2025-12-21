@@ -1,0 +1,26 @@
+name: my_flutter_plugin
+description: A Flutter plugin for testing
+version: 1.0.0
+homepage: https://example.com
+
+environment:
+  sdk: ^3.0.0
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.example.my_flutter_plugin
+        pluginClass: MyFlutterPlugin
+      ios:
+        pluginClass: MyFlutterPlugin

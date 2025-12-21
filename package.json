@@ -1,0 +1,346 @@
+{
+  "name": "pubspec-master",
+  "displayName": "Pubspec Master",
+  "description": "Flutter/Dart monorepo management - Dashboard, dependency graph, and migration tools",
+  "version": "0.5.0",
+  "publisher": "moinsen-dev",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/moinsen-dev/pubspec-master"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "flutter",
+    "dart",
+    "pubspec",
+    "monorepo",
+    "workspace",
+    "dependency",
+    "package"
+  ],
+  "icon": "media/icons/pubspec-master.png",
+  "activationEvents": [
+    "workspaceContains:**/pubspec.yaml"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "pubspec-master",
+          "title": "Pubspec Master",
+          "icon": "media/icons/pubspec-master.svg"
+        }
+      ]
+    },
+    "views": {
+      "pubspec-master": [
+        {
+          "id": "pubspecMaster.dashboard",
+          "name": "Packages",
+          "icon": "$(package)"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "pubspecMaster.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)",
+        "category": "Pubspec Master"
+      },
+      {
+        "command": "pubspecMaster.pubGetAll",
+        "title": "Run Pub Get (All Packages)",
+        "icon": "$(cloud-download)",
+        "category": "Pubspec Master"
+      },
+      {
+        "command": "pubspecMaster.pubUpgradeAll",
+        "title": "Run Pub Upgrade (All Packages)",
+        "icon": "$(cloud-upload)",
+        "category": "Pubspec Master"
+      },
+      {
+        "command": "pubspecMaster.openPubspec",
+        "title": "Open pubspec.yaml",
+        "icon": "$(go-to-file)",
+        "category": "Pubspec Master"
+      },
+      {
+        "command": "pubspecMaster.pubGet",
+        "title": "Run Pub Get",
+        "icon": "$(cloud-download)",
+        "category": "Pubspec Master"
+      },
+      {
+        "command": "pubspecMaster.pubUpgrade",
+        "title": "Run Pub Upgrade",
+        "icon": "$(cloud-upload)",
+        "category": "Pubspec Master"
+      },
+      {
+        "command": "pubspecMaster.showDashboard",
+        "title": "Show Dashboard",
+        "icon": "$(dashboard)",
+        "category": "Pubspec Master"
+      },
+      {
+        "command": "pubspecMaster.showGraph",
+        "title": "Show Dependency Graph",
+        "icon": "$(type-hierarchy)",
+        "category": "Pubspec Master"
+      },
+      {
+        "command": "pubspecMaster.fixConflict",
+        "title": "Fix Version Conflict",
+        "icon": "$(wand)",
+        "category": "Pubspec Master"
+      },
+      {
+        "command": "pubspecMaster.fixSdkMismatch",
+        "title": "Fix SDK Mismatch",
+        "icon": "$(wand)",
+        "category": "Pubspec Master"
+      },
+      {
+        "command": "pubspecMaster.syncAllVersions",
+        "title": "Sync All Versions",
+        "icon": "$(sync)",
+        "category": "Pubspec Master"
+      },
+      {
+        "command": "pubspecMaster.expandAll",
+        "title": "Expand All",
+        "icon": "$(expand-all)",
+        "category": "Pubspec Master"
+      },
+      {
+        "command": "pubspecMaster.showMigrationWizard",
+        "title": "Migration Wizard",
+        "icon": "$(wand)",
+        "category": "Pubspec Master"
+      },
+      {
+        "command": "pubspecMaster.createConfig",
+        "title": "Create Configuration File",
+        "icon": "$(new-file)",
+        "category": "Pubspec Master"
+      },
+      {
+        "command": "pubspecMaster.openConfig",
+        "title": "Open Configuration File",
+        "icon": "$(settings-gear)",
+        "category": "Pubspec Master"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "pubspecMaster.refresh",
+          "when": "view == pubspecMaster.dashboard",
+          "group": "navigation@1"
+        },
+        {
+          "command": "pubspecMaster.expandAll",
+          "when": "view == pubspecMaster.dashboard",
+          "group": "navigation@2"
+        },
+        {
+          "command": "pubspecMaster.showDashboard",
+          "when": "view == pubspecMaster.dashboard",
+          "group": "navigation@3"
+        },
+        {
+          "command": "pubspecMaster.showGraph",
+          "when": "view == pubspecMaster.dashboard",
+          "group": "navigation@4"
+        },
+        {
+          "command": "pubspecMaster.pubGetAll",
+          "when": "view == pubspecMaster.dashboard",
+          "group": "actions@1"
+        },
+        {
+          "command": "pubspecMaster.pubUpgradeAll",
+          "when": "view == pubspecMaster.dashboard",
+          "group": "actions@2"
+        },
+        {
+          "command": "pubspecMaster.showMigrationWizard",
+          "when": "view == pubspecMaster.dashboard",
+          "group": "actions@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "pubspecMaster.openPubspec",
+          "when": "view == pubspecMaster.dashboard && viewItem == package",
+          "group": "inline"
+        },
+        {
+          "command": "pubspecMaster.pubGet",
+          "when": "view == pubspecMaster.dashboard && viewItem == package",
+          "group": "commands@1"
+        },
+        {
+          "command": "pubspecMaster.pubUpgrade",
+          "when": "view == pubspecMaster.dashboard && viewItem == package",
+          "group": "commands@2"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "pubspecMaster.showDashboard",
+        "key": "ctrl+shift+p d",
+        "mac": "cmd+shift+p d",
+        "when": "workspaceFolderCount > 0"
+      },
+      {
+        "command": "pubspecMaster.showGraph",
+        "key": "ctrl+shift+p g",
+        "mac": "cmd+shift+p g",
+        "when": "workspaceFolderCount > 0"
+      },
+      {
+        "command": "pubspecMaster.refresh",
+        "key": "ctrl+shift+p r",
+        "mac": "cmd+shift+p r",
+        "when": "view == pubspecMaster.dashboard"
+      },
+      {
+        "command": "pubspecMaster.pubGetAll",
+        "key": "ctrl+shift+p i",
+        "mac": "cmd+shift+p i",
+        "when": "workspaceFolderCount > 0"
+      },
+      {
+        "command": "pubspecMaster.pubUpgradeAll",
+        "key": "ctrl+shift+p u",
+        "mac": "cmd+shift+p u",
+        "when": "workspaceFolderCount > 0"
+      },
+      {
+        "command": "pubspecMaster.showMigrationWizard",
+        "key": "ctrl+shift+p m",
+        "mac": "cmd+shift+p m",
+        "when": "workspaceFolderCount > 0"
+      },
+      {
+        "command": "pubspecMaster.syncAllVersions",
+        "key": "ctrl+shift+p s",
+        "mac": "cmd+shift+p s",
+        "when": "workspaceFolderCount > 0"
+      }
+    ],
+    "configuration": {
+      "title": "Pubspec Master",
+      "properties": {
+        "pubspecMaster.scan.excludePatterns": {
+          "type": "array",
+          "default": [
+            "**/build/**",
+            "**/.dart_tool/**",
+            "**/ios/Pods/**",
+            "**/android/.gradle/**",
+            "**/test/fixtures/**"
+          ],
+          "description": "Glob patterns to exclude from workspace scanning"
+        },
+        "pubspecMaster.scan.maxDepth": {
+          "type": "number",
+          "default": 10,
+          "description": "Maximum directory depth for pubspec.yaml discovery"
+        },
+        "pubspecMaster.dashboard.refreshOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-refresh dashboard when pubspec.yaml files are saved"
+        },
+        "pubspecMaster.cache.ttlMinutes": {
+          "type": "number",
+          "default": 15,
+          "description": "Cache duration for pub.dev API responses (in minutes)"
+        },
+        "pubspecMaster.cache.offlineMaxHours": {
+          "type": "number",
+          "default": 24,
+          "description": "Maximum age of cached data for offline mode (in hours)"
+        },
+        "pubspecMaster.sync.createBackup": {
+          "type": "boolean",
+          "default": true,
+          "description": "Create backup before applying version sync changes"
+        },
+        "pubspecMaster.sync.backupLocation": {
+          "type": "string",
+          "default": ".pubspec-master-backup",
+          "description": "Directory for version sync backups (relative to workspace root)"
+        },
+        "pubspecMaster.sync.ignoredPackages": {
+          "type": "array",
+          "default": [],
+          "description": "Packages to exclude from version synchronization"
+        },
+        "pubspecMaster.sync.ignoredDependencies": {
+          "type": "array",
+          "default": [],
+          "description": "Dependencies to exclude from conflict detection"
+        },
+        "pubspecMaster.sync.analyzeAfterFix": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically run flutter analyze after applying version fixes"
+        },
+        "pubspecMaster.output.showTerminal": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show output in terminal panel for pub commands"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p ./tsconfig.test.json",
+    "watch-tests": "tsc -p ./tsconfig.test.json -w",
+    "pretest": "npm run compile-tests && npm run compile",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "mocha --require ts-node/register 'test/unit/**/*.spec.ts'",
+    "test:integration": "node ./out/test/runTests.js",
+    "lint": "eslint src --ext ts",
+    "lint:fix": "eslint src --ext ts --fix"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.11",
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vscode/test-electron": "^2.3.9",
+    "chai": "^4.4.1",
+    "eslint": "^8.56.0",
+    "mocha": "^10.4.0",
+    "ts-loader": "^9.5.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3",
+    "webpack": "^5.90.3",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "yaml": "^2.3.4"
+  }
+}

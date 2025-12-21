@@ -1,0 +1,1 @@
+export { ConflictDiagnosticProvider } from './ConflictDiagnostics';

@@ -1,0 +1,10 @@
+name: invalid_syntax
+description: This file has invalid YAML syntax
+
+environment:
+  sdk: ^3.0.0
+
+dependencies:
+  - this: is
+  - invalid: yaml
+    indentation
