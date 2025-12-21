@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { PubspecInfo } from '../types';
+import { PubspecInfo, PackageHealthIssue } from '../types';
 import { VersionConflict, SdkMismatch, WorkspaceAnalysis } from '../core/VersionAnalyzer';
 
 /**
@@ -37,6 +37,11 @@ export class ConflictDiagnosticProvider implements vscode.Disposable {
     // Process SDK mismatches
     for (const mismatch of analysis.sdkMismatches) {
       this.addSdkMismatchDiagnostics(mismatch, packages, diagnosticsMap);
+    }
+
+    // Process package health issues
+    for (const healthIssue of analysis.healthIssues) {
+      this.addHealthDiagnostics(healthIssue, packages, diagnosticsMap);
     }
 
     // Set all diagnostics
@@ -80,7 +85,7 @@ export class ConflictDiagnosticProvider implements vscode.Disposable {
       );
 
       diagnostic.code = 'pubspecMaster.versionConflict';
-      diagnostic.source = 'Pubspec Master';
+      diagnostic.source = 'Moinsen Pubspec Master';
 
       // Add related information for other packages with the same conflict
       diagnostic.relatedInformation = conflict.packages
@@ -142,7 +147,7 @@ export class ConflictDiagnosticProvider implements vscode.Disposable {
       );
 
       diagnostic.code = 'pubspecMaster.sdkMismatch';
-      diagnostic.source = 'Pubspec Master';
+      diagnostic.source = 'Moinsen Pubspec Master';
 
       // Add related information
       diagnostic.relatedInformation = mismatch.packages
@@ -271,6 +276,82 @@ export class ConflictDiagnosticProvider implements vscode.Disposable {
   }
 
   /**
+   * Add diagnostics for a package health issue
+   */
+  private addHealthDiagnostics(
+    healthIssue: PackageHealthIssue,
+    packages: PubspecInfo[],
+    diagnosticsMap: Map<string, vscode.Diagnostic[]>
+  ): void {
+    // Add diagnostic to each package that uses this dependency
+    for (const packageName of healthIssue.usedBy) {
+      const pubspec = packages.find(p => p.name === packageName);
+      if (!pubspec) {continue;}
+
+      // Check if it's a dev dependency or regular dependency
+      const isDev = pubspec.devDependencies.has(healthIssue.packageName);
+      const location = this.findDependencyLocation(
+        pubspec.path,
+        healthIssue.packageName,
+        isDev
+      );
+
+      if (!location) {continue;}
+
+      const severity = this.mapHealthSeverity(healthIssue.severity);
+      const message = healthIssue.message;
+
+      const diagnostic = new vscode.Diagnostic(
+        new vscode.Range(
+          location.line,
+          location.startCol,
+          location.line,
+          location.endCol
+        ),
+        message,
+        severity
+      );
+
+      diagnostic.code = 'pubspecMaster.packageHealth';
+      diagnostic.source = 'Moinsen Pubspec Master';
+
+      // Add suggestion as related info
+      if (healthIssue.suggestion) {
+        diagnostic.relatedInformation = [
+          new vscode.DiagnosticRelatedInformation(
+            new vscode.Location(
+              vscode.Uri.file(pubspec.path),
+              new vscode.Position(location.line, 0)
+            ),
+            `Suggestion: ${healthIssue.suggestion}`
+          ),
+        ];
+      }
+
+      // Add extra info about days since update
+      if (healthIssue.daysSinceUpdate > 0) {
+        const yearsAgo = Math.floor(healthIssue.daysSinceUpdate / 365);
+        const monthsAgo = Math.floor((healthIssue.daysSinceUpdate % 365) / 30);
+        let ageText = '';
+        if (yearsAgo > 0) {
+          ageText = `${yearsAgo} year${yearsAgo > 1 ? 's' : ''}`;
+          if (monthsAgo > 0) {
+            ageText += ` ${monthsAgo} month${monthsAgo > 1 ? 's' : ''}`;
+          }
+        } else {
+          ageText = `${monthsAgo} month${monthsAgo > 1 ? 's' : ''}`;
+        }
+        (diagnostic as unknown as { ageText: string }).ageText = ageText;
+      }
+
+      if (!diagnosticsMap.has(pubspec.path)) {
+        diagnosticsMap.set(pubspec.path, []);
+      }
+      diagnosticsMap.get(pubspec.path)!.push(diagnostic);
+    }
+  }
+
+  /**
    * Map our severity to VS Code DiagnosticSeverity
    */
   private mapSeverity(severity: 'high' | 'medium' | 'low'): vscode.DiagnosticSeverity {
@@ -281,6 +362,20 @@ export class ConflictDiagnosticProvider implements vscode.Disposable {
         return vscode.DiagnosticSeverity.Warning;
       case 'low':
         return vscode.DiagnosticSeverity.Information;
+    }
+  }
+
+  /**
+   * Map health issue severity to VS Code DiagnosticSeverity
+   */
+  private mapHealthSeverity(severity: 'critical' | 'warning' | 'info'): vscode.DiagnosticSeverity {
+    switch (severity) {
+      case 'critical':
+        return vscode.DiagnosticSeverity.Error;
+      case 'warning':
+        return vscode.DiagnosticSeverity.Warning;
+      case 'info':
+        return vscode.DiagnosticSeverity.Hint;
     }
   }
 

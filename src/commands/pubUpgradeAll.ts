@@ -13,13 +13,13 @@ export async function pubUpgradeAllCommand(
   const packages = getPackages();
 
   if (packages.length === 0) {
-    vscode.window.showInformationMessage('Pubspec Master: No packages found in workspace.');
+    vscode.window.showInformationMessage('Moinsen: No packages found in workspace.');
     return;
   }
 
   // Confirm with user before upgrading
   const confirm = await vscode.window.showWarningMessage(
-    `Pubspec Master: This will run pub upgrade on ${packages.length} package(s). Continue?`,
+    `Moinsen: This will run pub upgrade on ${packages.length} package(s). Continue?`,
     { modal: true },
     'Yes',
     'No'
@@ -36,7 +36,7 @@ export async function pubUpgradeAllCommand(
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: 'Pubspec Master: Running pub upgrade',
+      title: 'Moinsen: Running pub upgrade',
       cancellable: true,
     },
     async (progress, token) => {
@@ -45,7 +45,7 @@ export async function pubUpgradeAllCommand(
 
       for (const pkg of packages) {
         if (token.isCancellationRequested) {
-          vscode.window.showWarningMessage('Pubspec Master: Pub upgrade cancelled.');
+          vscode.window.showWarningMessage('Moinsen: Pub upgrade cancelled.');
           return;
         }
 
@@ -78,11 +78,11 @@ export async function pubUpgradeAllCommand(
 
       if (failed.length === 0) {
         vscode.window.showInformationMessage(
-          `Pubspec Master: Pub upgrade completed for ${packages.length} package(s). See Output for details.`
+          `Moinsen: Pub upgrade completed for ${packages.length} package(s). See Output for details.`
         );
       } else {
         vscode.window.showWarningMessage(
-          `Pubspec Master: Pub upgrade failed for: ${failed.join(', ')}. See Output for details.`
+          `Moinsen: Pub upgrade failed for: ${failed.join(', ')}. See Output for details.`
         );
       }
     }

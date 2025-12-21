@@ -14,7 +14,7 @@ let dashboardTreeView: vscode.TreeView<DashboardTreeItem> | undefined;
  * Called when VS Code activates the extension (when a pubspec.yaml is found)
  */
 export function activate(context: vscode.ExtensionContext): void {
-  console.log('Pubspec Master is now active');
+  console.log('Moinsen Pubspec Master is now active');
 
   // Create dashboard provider
   dashboardProvider = new DashboardProvider();
@@ -43,7 +43,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const hasShownWelcome = context.globalState.get<boolean>('hasShownWelcome');
   if (!hasShownWelcome) {
     vscode.window.showInformationMessage(
-      'Pubspec Master is ready! Click the Pubspec Master icon in the activity bar to view your packages.',
+      'Moinsen Pubspec Master is ready! Click the icon in the activity bar to view your packages.',
       'Got it'
     );
     context.globalState.update('hasShownWelcome', true);
@@ -78,6 +78,6 @@ function updateDiagnostics(): void {
  * Called when VS Code deactivates the extension
  */
 export function deactivate(): void {
-  console.log('Pubspec Master deactivated');
+  console.log('Moinsen Pubspec Master deactivated');
   // Cleanup is handled via disposables registered in context.subscriptions
 }

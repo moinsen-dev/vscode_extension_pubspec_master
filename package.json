@@ -1,13 +1,13 @@
 {
   "name": "pubspec-master",
-  "displayName": "Pubspec Master",
-  "description": "Flutter/Dart monorepo management - Dashboard, dependency graph, and migration tools",
-  "version": "0.5.0",
-  "publisher": "moinsen-dev",
+  "displayName": "Moinsen Pubspec Master",
+  "description": "Flutter/Dart monorepo management by Moinsen - Dashboard, dependency graph, migration tools, and private package support",
+  "version": "0.7.0",
+  "publisher": "moinsen",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/moinsen-dev/pubspec-master"
+    "url": "https://github.com/moinsen-dev/moinsen-pubspec-master"
   },
   "engines": {
     "vscode": "^1.85.0"
@@ -35,7 +35,7 @@
       "activitybar": [
         {
           "id": "pubspec-master",
-          "title": "Pubspec Master",
+          "title": "Moinsen Pubspec Master",
           "icon": "media/icons/pubspec-master.svg"
         }
       ]
@@ -149,34 +149,39 @@
           "group": "navigation@1"
         },
         {
+          "command": "pubspecMaster.refresh",
+          "when": "view == pubspecMaster.dashboard",
+          "group": "1_actions@1"
+        },
+        {
           "command": "pubspecMaster.expandAll",
           "when": "view == pubspecMaster.dashboard",
-          "group": "navigation@2"
+          "group": "navigation@6"
         },
         {
           "command": "pubspecMaster.showDashboard",
           "when": "view == pubspecMaster.dashboard",
-          "group": "navigation@3"
+          "group": "navigation@7"
         },
         {
           "command": "pubspecMaster.showGraph",
           "when": "view == pubspecMaster.dashboard",
-          "group": "navigation@4"
+          "group": "navigation@8"
         },
         {
           "command": "pubspecMaster.pubGetAll",
           "when": "view == pubspecMaster.dashboard",
-          "group": "actions@1"
+          "group": "2_pubcommands@1"
         },
         {
           "command": "pubspecMaster.pubUpgradeAll",
           "when": "view == pubspecMaster.dashboard",
-          "group": "actions@2"
+          "group": "2_pubcommands@2"
         },
         {
           "command": "pubspecMaster.showMigrationWizard",
           "when": "view == pubspecMaster.dashboard",
-          "group": "actions@3"
+          "group": "3_tools@1"
         }
       ],
       "view/item/context": [
@@ -242,7 +247,7 @@
       }
     ],
     "configuration": {
-      "title": "Pubspec Master",
+      "title": "Moinsen Pubspec Master",
       "properties": {
         "pubspecMaster.scan.excludePatterns": {
           "type": "array",
@@ -304,6 +309,81 @@
           "type": "boolean",
           "default": true,
           "description": "Show output in terminal panel for pub commands"
+        },
+        "pubspecMaster.health.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable package health warnings for unmaintained dependencies"
+        },
+        "pubspecMaster.health.unmaintainedThresholdDays": {
+          "type": "number",
+          "default": 365,
+          "minimum": 30,
+          "maximum": 1095,
+          "description": "Days since last update to consider a package potentially unmaintained (warning level)"
+        },
+        "pubspecMaster.health.criticalThresholdDays": {
+          "type": "number",
+          "default": 730,
+          "minimum": 180,
+          "maximum": 1825,
+          "description": "Days since last update to consider a package critically unmaintained (error level)"
+        },
+        "pubspecMaster.health.checkDiscontinued": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show critical warnings for packages marked as discontinued on pub.dev"
+        },
+        "pubspecMaster.health.minScoreThreshold": {
+          "type": "number",
+          "default": 50,
+          "minimum": 0,
+          "maximum": 160,
+          "description": "Minimum pub.dev score to consider a package high-quality (0-160 range)"
+        },
+        "pubspecMaster.github.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable GitHub repository analysis for enhanced package risk scoring"
+        },
+        "pubspecMaster.github.token": {
+          "type": "string",
+          "default": "",
+          "description": "GitHub personal access token for higher API rate limits (optional, increases from 60 to 5000 requests/hour)",
+          "markdownDescription": "GitHub personal access token for higher API rate limits. [Create a token](https://github.com/settings/tokens) with `public_repo` scope."
+        },
+        "pubspecMaster.github.cacheTtlMinutes": {
+          "type": "number",
+          "default": 60,
+          "minimum": 5,
+          "maximum": 1440,
+          "description": "How long to cache GitHub metrics (in minutes)"
+        },
+        "pubspecMaster.github.highIssueCountThreshold": {
+          "type": "number",
+          "default": 100,
+          "minimum": 10,
+          "maximum": 1000,
+          "description": "Number of open issues to trigger a 'high issue count' warning"
+        },
+        "pubspecMaster.github.staleRepoThresholdDays": {
+          "type": "number",
+          "default": 180,
+          "minimum": 30,
+          "maximum": 730,
+          "description": "Days without commits to consider a repository stale"
+        },
+        "pubspecMaster.moinsenPub.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Connect to Moinsen Pub for private package hosting and automated maintenance",
+          "markdownDescription": "Connect to [Moinsen Pub](https://moinsen.pub) for private package hosting and automated maintenance (Recommended for teams)"
+        },
+        "pubspecMaster.moinsenPub.serverUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Your Moinsen Pub server URL (e.g., https://pub.yourcompany.com)",
+          "markdownDescription": "Your [Moinsen Pub](https://moinsen.pub) server URL. Get started at [moinsen.pub](https://moinsen.pub)"
         }
       }
     }

@@ -6,7 +6,7 @@ import {
   VersionAnalyzer,
   WorkspaceAnalysis,
 } from '../../core';
-import { PubDevClient } from '../../api';
+import { PubDevClient, PubPackageInfo, GitHubClient, GitHubMetrics } from '../../api';
 import { VersionSyncService } from '../../services';
 
 /**
@@ -23,6 +23,7 @@ export class DashboardPanel implements vscode.Disposable {
   private readonly dependencyResolver: DependencyResolver;
   private readonly versionAnalyzer: VersionAnalyzer;
   private readonly pubDevClient: PubDevClient;
+  private readonly githubClient: GitHubClient;
   private readonly versionSyncService: VersionSyncService;
   private disposables: vscode.Disposable[] = [];
 
@@ -47,6 +48,7 @@ export class DashboardPanel implements vscode.Disposable {
     this.dependencyResolver = new DependencyResolver();
     this.versionAnalyzer = new VersionAnalyzer();
     this.pubDevClient = new PubDevClient(context);
+    this.githubClient = new GitHubClient(context);
 
     // Initialize VersionSyncService with workspace root
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
@@ -90,7 +92,7 @@ export class DashboardPanel implements vscode.Disposable {
     // Create new panel
     const panel = vscode.window.createWebviewPanel(
       DashboardPanel.viewType,
-      'Pubspec Master Dashboard',
+      'Moinsen Pubspec Master Dashboard',
       column,
       {
         enableScripts: true,
@@ -560,6 +562,9 @@ export class DashboardPanel implements vscode.Disposable {
         usedIn: string[];
       }> = [];
 
+      // Also collect package info for health analysis
+      const packageInfoMap = new Map<string, PubPackageInfo>();
+
       for (let i = 0; i < packagesToCheck.length; i += batchSize) {
         const batch = packagesToCheck.slice(i, i + batchSize);
         const batchResults = await this.pubDevClient.checkForUpdates(batch);
@@ -570,6 +575,12 @@ export class DashboardPanel implements vscode.Disposable {
             ...result,
             usedIn: dep?.usedIn || [],
           });
+
+          // Fetch full package info for health analysis
+          const pkgInfo = await this.pubDevClient.getPackageInfo(result.name);
+          if (pkgInfo) {
+            packageInfoMap.set(result.name, pkgInfo);
+          }
         }
 
         // Small delay between batches to avoid rate limiting
@@ -581,13 +592,86 @@ export class DashboardPanel implements vscode.Disposable {
       // Filter to only outdated packages
       this.outdatedPackages = results.filter((r) => r.hasUpdate);
 
-      const outdatedCount = this.outdatedPackages.length;
-      if (outdatedCount > 0) {
-        vscode.window.showInformationMessage(
-          `Found ${outdatedCount} outdated package(s)`
+      // Run package health analysis with configurable settings
+      const healthConfig = vscode.workspace.getConfiguration('pubspecMaster.health');
+      const healthEnabled = healthConfig.get<boolean>('enabled', true);
+      const githubConfig = vscode.workspace.getConfiguration('pubspecMaster.github');
+      const githubEnabled = githubConfig.get<boolean>('enabled', true);
+
+      if (healthEnabled && this.analysis) {
+        // Fetch GitHub metrics if enabled
+        const githubMetricsMap = new Map<string, GitHubMetrics>();
+
+        if (githubEnabled) {
+          // Collect GitHub URLs from package info
+          const packagesWithRepos: Array<{ name: string; repoUrl: string }> = [];
+          for (const [name, pkgInfo] of packageInfoMap) {
+            if (pkgInfo.repositoryUrl) {
+              packagesWithRepos.push({ name, repoUrl: pkgInfo.repositoryUrl });
+            }
+          }
+
+          // Fetch GitHub metrics in batches (respect rate limits)
+          const githubBatchSize = 5;
+          for (let i = 0; i < packagesWithRepos.length; i += githubBatchSize) {
+            const batch = packagesWithRepos.slice(i, i + githubBatchSize);
+
+            // Check rate limit before fetching
+            if (this.githubClient.getRateLimitRemaining() <= batch.length) {
+              console.warn('Moinsen: GitHub API rate limit approaching, skipping remaining repos');
+              break;
+            }
+
+            await Promise.all(
+              batch.map(async ({ name, repoUrl }) => {
+                const metrics = await this.githubClient.getRepoMetrics(repoUrl);
+                if (metrics) {
+                  githubMetricsMap.set(name, metrics);
+                }
+              })
+            );
+
+            // Small delay between batches
+            if (i + githubBatchSize < packagesWithRepos.length) {
+              await new Promise((resolve) => setTimeout(resolve, 200));
+            }
+          }
+        }
+
+        // Use enhanced health analysis with GitHub metrics
+        const healthIssues = this.versionAnalyzer.analyzePackageHealthWithGitHub(
+          this.packages,
+          packageInfoMap,
+          githubMetricsMap,
+          {
+            unmaintainedThresholdDays: healthConfig.get<number>('unmaintainedThresholdDays', 365),
+            criticalThresholdDays: healthConfig.get<number>('criticalThresholdDays', 730),
+            lowQualityScoreThreshold: healthConfig.get<number>('minScoreThreshold', 50),
+            highIssueCountThreshold: githubConfig.get<number>('highIssueCountThreshold', 100),
+            staleRepoThresholdDays: githubConfig.get<number>('staleRepoThresholdDays', 180),
+          }
         );
+
+        // Update analysis with health issues
+        this.analysis.healthIssues = healthIssues;
+        this.analysis.summary.totalHealthIssues = healthIssues.length;
+      }
+
+      const outdatedCount = this.outdatedPackages.length;
+      const healthIssueCount = this.analysis?.healthIssues?.length || 0;
+
+      if (outdatedCount > 0 || healthIssueCount > 0) {
+        let message = '';
+        if (outdatedCount > 0 && healthIssueCount > 0) {
+          message = `Found ${outdatedCount} outdated package(s) and ${healthIssueCount} health warning(s)`;
+        } else if (outdatedCount > 0) {
+          message = `Found ${outdatedCount} outdated package(s)`;
+        } else {
+          message = `Found ${healthIssueCount} package health warning(s)`;
+        }
+        vscode.window.showInformationMessage(message);
       } else {
-        vscode.window.showInformationMessage('All packages are up to date!');
+        vscode.window.showInformationMessage('All packages are up to date and healthy!');
       }
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to check for updates: ${error}`);
@@ -783,7 +867,7 @@ export class DashboardPanel implements vscode.Disposable {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src ${webview.cspSource} data:; font-src ${webview.cspSource};">
-  <title>Pubspec Master Dashboard</title>
+  <title>Moinsen Pubspec Master Dashboard</title>
   <style>
     :root {
       --pm-primary: var(--vscode-button-background);
@@ -983,6 +1067,11 @@ export class DashboardPanel implements vscode.Disposable {
     .badge.medium { background-color: rgba(255, 152, 0, 0.2); color: var(--pm-warning); }
     .badge.low { background-color: rgba(158, 158, 158, 0.2); color: var(--pm-neutral); }
     .badge.workspace { background-color: rgba(33, 150, 243, 0.2); color: #2196F3; }
+    .badge.critical { background-color: rgba(244, 67, 54, 0.2); color: var(--pm-error); }
+    .badge.warning { background-color: rgba(255, 152, 0, 0.2); color: var(--pm-warning); }
+    .badge.info { background-color: rgba(158, 158, 158, 0.2); color: var(--pm-neutral); }
+    .badge.discontinued { background-color: rgba(244, 67, 54, 0.3); color: var(--pm-error); }
+    .badge.unmaintained { background-color: rgba(255, 152, 0, 0.3); color: var(--pm-warning); }
 
     .empty-state { text-align: center; padding: 40px; color: var(--pm-neutral); }
     .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
@@ -999,9 +1088,119 @@ export class DashboardPanel implements vscode.Disposable {
     }
 
     .offline-banner.visible { display: flex; }
+
+    .promo-banner {
+      background: linear-gradient(90deg, var(--pm-primary) 0%, #6366f1 100%);
+      color: white;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+    .promo-banner.hidden { display: none; }
+    .promo-banner a {
+      color: white;
+      text-decoration: underline;
+      font-weight: 500;
+    }
+    .promo-banner a:hover { opacity: 0.9; }
+    .promo-dismiss {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      cursor: pointer;
+      margin-left: auto;
+      font-size: 16px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      line-height: 1;
+    }
+    .promo-dismiss:hover { background: rgba(255,255,255,0.3); }
+
+    /* GitHub metrics styles */
+    .github-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      margin: 8px 0;
+      background-color: var(--pm-surface);
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--pm-neutral);
+      border: 1px solid var(--pm-border);
+    }
+    .github-link {
+      color: var(--pm-primary);
+      text-decoration: none;
+      margin-left: auto;
+    }
+    .github-link:hover {
+      text-decoration: underline;
+    }
+    .badge.security-advisory {
+      background-color: #dc2626;
+      color: white;
+    }
+    .badge.archived {
+      background-color: #6b7280;
+      color: white;
+    }
+    .badge.stale-repo {
+      background-color: #f59e0b;
+      color: white;
+    }
+    .badge.high-issue-count {
+      background-color: #f97316;
+      color: white;
+    }
+    .issue-detail.suggestion {
+      color: var(--pm-primary);
+      font-style: italic;
+    }
+    .fix-btn-link {
+      background: transparent;
+      color: var(--pm-primary);
+      border: 1px solid var(--pm-primary);
+    }
+    .fix-btn-link:hover {
+      background: var(--pm-primary);
+      color: white;
+    }
+
+    .promo-subtle {
+      padding: 12px 16px;
+      font-size: 12px;
+      color: var(--pm-neutral);
+      background-color: var(--pm-surface);
+      border-top: 1px solid var(--pm-border);
+    }
+    .promo-subtle a {
+      color: var(--pm-primary);
+      text-decoration: none;
+    }
+    .promo-subtle a:hover {
+      text-decoration: underline;
+    }
+    .promo-subtle .coming-soon {
+      color: var(--pm-neutral);
+      font-style: italic;
+      margin-left: 4px;
+    }
   </style>
 </head>
 <body>
+  <div id="promo-banner" class="promo-banner">
+    <span>&#128640;</span>
+    <span>Need private package hosting?</span>
+    <a href="https://moinsen.pub" target="_blank">Try Moinsen Pub</a>
+    <button class="promo-dismiss" id="promo-dismiss" title="Dismiss">&#10005;</button>
+  </div>
+
   <div id="offline-banner" class="offline-banner">
     <span>&#9888;</span>
     <span>Offline mode - using cached data</span>
@@ -1010,7 +1209,7 @@ export class DashboardPanel implements vscode.Disposable {
   <div class="header">
     <h1>
       <span>&#128230;</span>
-      <span>Pubspec Master</span>
+      <span>Moinsen Pubspec Master</span>
     </h1>
     <div class="header-actions">
       <button class="btn btn-secondary" id="btn-refresh">
@@ -1067,6 +1266,13 @@ export class DashboardPanel implements vscode.Disposable {
     <div class="issues-list" id="outdated-list"></div>
   </div>
 
+  <div class="section" id="health-section" style="display: none;">
+    <div class="section-header">
+      <h2 class="section-title">&#9888; Package Health Warnings</h2>
+    </div>
+    <div class="issues-list" id="health-list"></div>
+  </div>
+
   <div class="section">
     <div class="section-header">
       <h2 class="section-title">Issues</h2>
@@ -1089,6 +1295,18 @@ export class DashboardPanel implements vscode.Disposable {
 
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
+
+    // Restore state (including promo banner dismissed status)
+    const previousState = vscode.getState() || {};
+    if (previousState.promoDismissed) {
+      document.getElementById('promo-banner').classList.add('hidden');
+    }
+
+    // Handle promo banner dismiss
+    document.getElementById('promo-dismiss').addEventListener('click', function() {
+      document.getElementById('promo-banner').classList.add('hidden');
+      vscode.setState({ ...vscode.getState(), promoDismissed: true });
+    });
 
     // Sanitize text content to prevent XSS
     function sanitizeText(text) {
@@ -1170,6 +1388,9 @@ export class DashboardPanel implements vscode.Disposable {
 
       // Update issues list using DOM methods (safe)
       renderIssues(data.analysis);
+
+      // Update health issues (Package Health Warnings section)
+      renderHealthIssues(data.analysis?.healthIssues || []);
 
       // Update package list using DOM methods (safe)
       renderPackages(data.packages);
@@ -1411,6 +1632,226 @@ export class DashboardPanel implements vscode.Disposable {
 
         container.appendChild(item);
       });
+    }
+
+    function renderHealthIssues(healthIssues) {
+      const healthSection = document.getElementById('health-section');
+      const healthList = document.getElementById('health-list');
+
+      // Clear existing content
+      while (healthList.firstChild) {
+        healthList.removeChild(healthList.firstChild);
+      }
+
+      // Hide section if no health issues
+      if (!healthIssues || healthIssues.length === 0) {
+        healthSection.style.display = 'none';
+        return;
+      }
+
+      // Show section
+      healthSection.style.display = 'block';
+
+      // Render each health issue
+      healthIssues.forEach(function(issue) {
+        const item = document.createElement('div');
+        item.className = 'issue-item';
+
+        // Icon based on severity and issue type
+        var iconText = '\\u26A0'; // Default warning
+        if (issue.severity === 'critical') {
+          if (issue.issueType === 'security-advisory') {
+            iconText = '\\u{1F6A8}'; // Police car light for security
+          } else if (issue.issueType === 'archived') {
+            iconText = '\\u{1F4E6}'; // Package for archived
+          } else {
+            iconText = '\\u{1F6D1}'; // Stop sign
+          }
+        } else if (issue.severity === 'info') {
+          iconText = '\\u{1F4A1}'; // Light bulb
+        }
+        const icon = createTextElement('span', iconText, 'issue-icon');
+        item.appendChild(icon);
+
+        const content = document.createElement('div');
+        content.className = 'issue-content';
+
+        // Title with package name and badges
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'issue-title';
+        titleDiv.textContent = sanitizeText(issue.packageName);
+
+        // Add risk score badge if available
+        if (issue.riskScore !== undefined && issue.riskScore !== null) {
+          var riskClass = 'badge ';
+          if (issue.riskScore >= 70) {
+            riskClass += 'critical';
+          } else if (issue.riskScore >= 40) {
+            riskClass += 'warning';
+          } else {
+            riskClass += 'info';
+          }
+          const riskBadge = createTextElement('span', 'Risk: ' + issue.riskScore + '/100', riskClass);
+          titleDiv.appendChild(riskBadge);
+        }
+
+        // Add issue type badge
+        var typeBadgeText = issue.issueType.replace(/-/g, ' ');
+        var typeBadgeClass = 'badge ' + issue.issueType;
+        const typeBadge = createTextElement('span', typeBadgeText, typeBadgeClass);
+        titleDiv.appendChild(typeBadge);
+
+        content.appendChild(titleDiv);
+
+        // Detail line with message
+        const detailDiv = createTextElement('div', issue.message, 'issue-detail');
+        content.appendChild(detailDiv);
+
+        // Show GitHub metrics if available
+        if (issue.github) {
+          const githubDiv = document.createElement('div');
+          githubDiv.className = 'github-metrics';
+
+          var metricsText = '\\u{1F4CA} GitHub: ';
+          var metricParts = [];
+
+          if (issue.github.stars !== undefined) {
+            metricParts.push('\\u2B50 ' + issue.github.stars.toLocaleString());
+          }
+          if (issue.github.openIssues !== undefined) {
+            metricParts.push('\\u{1F41B} ' + issue.github.openIssues + ' issues');
+          }
+          if (issue.github.openPRs !== undefined) {
+            metricParts.push('\\u{1F500} ' + issue.github.openPRs + ' PRs');
+          }
+          if (issue.github.daysSinceLastCommit !== undefined && issue.github.daysSinceLastCommit > 30) {
+            var commitMonths = Math.floor(issue.github.daysSinceLastCommit / 30);
+            metricParts.push('\\u{23F0} ' + commitMonths + 'mo since commit');
+          }
+          if (issue.github.isArchived) {
+            metricParts.push('\\u{1F4E6} Archived');
+          }
+          if (issue.github.securityAdvisoryCount > 0) {
+            metricParts.push('\\u{1F6A8} ' + issue.github.securityAdvisoryCount + ' security alert' + (issue.github.securityAdvisoryCount > 1 ? 's' : ''));
+          }
+
+          metricsText += metricParts.join(' \\u2022 ');
+          githubDiv.textContent = metricsText;
+
+          // Make the repo name clickable if available
+          if (issue.github.repoFullName) {
+            const repoLink = document.createElement('a');
+            repoLink.href = 'https://github.com/' + issue.github.repoFullName;
+            repoLink.target = '_blank';
+            repoLink.textContent = ' \\u2192 View on GitHub';
+            repoLink.className = 'github-link';
+            githubDiv.appendChild(repoLink);
+          }
+
+          content.appendChild(githubDiv);
+        }
+
+        // Show which packages use this dependency
+        if (issue.usedBy && issue.usedBy.length > 0) {
+          const usedByText = 'Used by: ' + issue.usedBy.join(', ');
+          const usedByDiv = createTextElement('div', usedByText, 'issue-detail');
+          content.appendChild(usedByDiv);
+        }
+
+        // Show time since last update on pub.dev
+        if (issue.daysSinceUpdate > 0) {
+          var ageText = '';
+          var yearsAgo = Math.floor(issue.daysSinceUpdate / 365);
+          var monthsAgo = Math.floor((issue.daysSinceUpdate % 365) / 30);
+          if (yearsAgo > 0) {
+            ageText = 'Last pub.dev update: ' + yearsAgo + ' year' + (yearsAgo > 1 ? 's' : '');
+            if (monthsAgo > 0) {
+              ageText += ' ' + monthsAgo + ' month' + (monthsAgo > 1 ? 's' : '');
+            }
+            ageText += ' ago';
+          } else if (monthsAgo > 0) {
+            ageText = 'Last pub.dev update: ' + monthsAgo + ' month' + (monthsAgo > 1 ? 's' : '') + ' ago';
+          }
+          if (ageText) {
+            const ageDiv = createTextElement('div', ageText, 'issue-detail');
+            content.appendChild(ageDiv);
+          }
+        }
+
+        // Show suggestion if available
+        if (issue.suggestion) {
+          const suggestionDiv = createTextElement('div', '\\u{1F4A1} ' + issue.suggestion, 'issue-detail suggestion');
+          content.appendChild(suggestionDiv);
+        }
+
+        item.appendChild(content);
+
+        // Add action buttons
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'issue-actions';
+
+        // Add "Find Alternatives" button for critical issues
+        if (issue.severity === 'critical' || issue.issueType === 'discontinued' || issue.issueType === 'archived') {
+          const altBtn = document.createElement('button');
+          altBtn.className = 'fix-btn fix-btn-secondary';
+          altBtn.textContent = 'Find Alternatives';
+          altBtn.title = 'Search for alternative packages on pub.dev';
+          altBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            window.open('https://pub.dev/packages?q=' + encodeURIComponent(issue.packageName), '_blank');
+          });
+          actionsDiv.appendChild(altBtn);
+        }
+
+        // Add "View Issues" button if GitHub metrics show high issue count
+        if (issue.github && issue.github.repoFullName && issue.github.openIssues > 0) {
+          const issuesBtn = document.createElement('button');
+          issuesBtn.className = 'fix-btn fix-btn-link';
+          issuesBtn.textContent = 'View Issues';
+          issuesBtn.title = 'View open issues on GitHub';
+          issuesBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            window.open('https://github.com/' + issue.github.repoFullName + '/issues', '_blank');
+          });
+          actionsDiv.appendChild(issuesBtn);
+        }
+
+        if (actionsDiv.children.length > 0) {
+          item.appendChild(actionsDiv);
+        }
+
+        healthList.appendChild(item);
+      });
+
+      // Add subtle Moinsen Pub promotion at the bottom
+      var promoMessage = '\\u{1F4A1} ';
+      if (healthIssues.some(function(i) { return i.severity === 'critical'; })) {
+        promoMessage += 'Moinsen Pub patches issues before they become emergencies. ';
+      } else if (healthIssues.some(function(i) { return i.severity === 'warning'; })) {
+        promoMessage += 'Moinsen Pub keeps your dependencies healthy automatically. ';
+      } else {
+        promoMessage += 'Moinsen Pub monitors packages 24/7. ';
+      }
+
+      const promoDiv = document.createElement('div');
+      promoDiv.className = 'promo-subtle';
+
+      const promoText = document.createElement('span');
+      promoText.textContent = promoMessage;
+      promoDiv.appendChild(promoText);
+
+      const promoLink = document.createElement('a');
+      promoLink.href = 'https://pub.moinsen.dev';
+      promoLink.target = '_blank';
+      promoLink.textContent = 'Learn more \\u2192';
+      promoDiv.appendChild(promoLink);
+
+      const comingSoon = document.createElement('span');
+      comingSoon.className = 'coming-soon';
+      comingSoon.textContent = '(Coming Q1 2026)';
+      promoDiv.appendChild(comingSoon);
+
+      healthList.appendChild(promoDiv);
     }
 
     function renderPackages(packages) {

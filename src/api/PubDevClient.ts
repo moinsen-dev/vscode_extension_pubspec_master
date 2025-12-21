@@ -12,9 +12,31 @@ export interface PubPackageInfo {
       name: string;
       version: string;
       description?: string;
+      repository?: string;
+      homepage?: string;
+      issueTracker?: string;
     };
+    published?: string;  // ISO date string
   };
   versions: string[];
+
+  // Health indicators (extracted from pub.dev API)
+  /** ISO date of the latest version publication */
+  latestPublished?: string;
+  /** Whether the package is marked as discontinued on pub.dev */
+  isDiscontinued?: boolean;
+  /** Package score (0-160 range on pub.dev) */
+  score?: number;
+  /** Number of likes on pub.dev */
+  likes?: number;
+  /** Popularity percentage (0-100) */
+  popularity?: number;
+
+  // Repository info (for GitHub integration)
+  /** Repository URL (from pubspec repository or homepage) */
+  repositoryUrl?: string;
+  /** Issue tracker URL */
+  issueTrackerUrl?: string;
 }
 
 /**
@@ -62,20 +84,57 @@ export class PubDevClient {
     }
 
     try {
+      // pub.dev API response structure
       const response = await this.fetch<{
         name: string;
-        latest: { version: string; pubspec: { name: string; version: string; description?: string } };
-        versions: Array<{ version: string }>;
+        latest: {
+          version: string;
+          published?: string;
+          pubspec: {
+            name: string;
+            version: string;
+            description?: string;
+            repository?: string;
+            homepage?: string;
+            issue_tracker?: string;
+          };
+        };
+        versions: Array<{ version: string; published?: string }>;
+        // Health indicators from pub.dev API
+        isDiscontinued?: boolean;
       }>(`/packages/${packageName}`);
 
       if (response) {
+        // Extract repository URL (prefer repository over homepage)
+        const pubspec = response.latest.pubspec;
+        const repositoryUrl = pubspec.repository || this.extractGitHubUrl(pubspec.homepage);
+        const issueTrackerUrl = pubspec.issue_tracker || (repositoryUrl ? `${repositoryUrl}/issues` : undefined);
+
         const info: PubPackageInfo = {
           name: response.name,
-          latest: response.latest,
+          latest: {
+            ...response.latest,
+            pubspec: {
+              ...response.latest.pubspec,
+              repository: pubspec.repository,
+              homepage: pubspec.homepage,
+              issueTracker: pubspec.issue_tracker,
+            },
+          },
           versions: response.versions.map((v) => v.version),
+          // Extract health data
+          latestPublished: response.latest.published,
+          isDiscontinued: response.isDiscontinued ?? false,
+          // Repository info
+          repositoryUrl,
+          issueTrackerUrl,
         };
         this.setCache(cacheKey, info);
         this.isOnline = true;
+
+        // Fetch additional metrics (score, likes, popularity) from score endpoint
+        this.fetchPackageMetrics(packageName, info);
+
         return info;
       }
     } catch (error) {
@@ -88,6 +147,42 @@ export class PubDevClient {
     }
 
     return null;
+  }
+
+  /**
+   * Fetch additional package metrics (score, likes, popularity)
+   * This updates the cached info asynchronously
+   */
+  private async fetchPackageMetrics(packageName: string, info: PubPackageInfo): Promise<void> {
+    try {
+      const metrics = await this.fetch<{
+        score?: {
+          grantedPoints?: number;
+          maxPoints?: number;
+          likeCount?: number;
+          popularityScore?: number;
+        };
+        scorecard?: {
+          grantedPoints?: number;
+          maxPoints?: number;
+        };
+        likeCount?: number;
+        popularityScore?: number;
+      }>(`/packages/${packageName}/metrics`);
+
+      if (metrics) {
+        // Extract from different possible response structures
+        info.likes = metrics.likeCount ?? metrics.score?.likeCount;
+        info.popularity = metrics.popularityScore ?? metrics.score?.popularityScore;
+        info.score = metrics.score?.grantedPoints ?? metrics.scorecard?.grantedPoints;
+
+        // Update cache with metrics
+        const cacheKey = `package:${packageName}`;
+        this.setCache(cacheKey, info);
+      }
+    } catch {
+      // Metrics are optional, don't fail if unavailable
+    }
   }
 
   /**
@@ -127,6 +222,24 @@ export class PubDevClient {
   }
 
   /**
+   * Extract GitHub URL from homepage if it points to GitHub
+   */
+  private extractGitHubUrl(url: string | undefined): string | undefined {
+    if (!url) {
+      return undefined;
+    }
+    // Check if it's a GitHub URL
+    if (url.includes('github.com')) {
+      // Clean up the URL to get just the repo root
+      const match = url.match(/https?:\/\/github\.com\/([^/]+\/[^/]+)/);
+      if (match) {
+        return `https://github.com/${match[1]}`;
+      }
+    }
+    return undefined;
+  }
+
+  /**
    * Check if version A is newer than version B
    */
   private isNewer(versionA: string, versionB: string): boolean {
@@ -159,7 +272,7 @@ export class PubDevClient {
         method: 'GET',
         headers: {
           Accept: 'application/json',
-          'User-Agent': 'pubspec-master-vscode',
+          'User-Agent': 'moinsen-pubspec-master-vscode/0.6.0',
         },
         timeout: 10000,
       };
@@ -180,7 +293,7 @@ export class PubDevClient {
             }
           } else if (res.statusCode === 429) {
             // Rate limited
-            console.warn('Pubspec Master: Rate limited by pub.dev');
+            console.warn('Moinsen: Rate limited by pub.dev');
             resolve(null);
           } else {
             resolve(null);

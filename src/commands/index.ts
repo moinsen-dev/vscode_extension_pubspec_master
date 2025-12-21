@@ -86,7 +86,7 @@ export function registerCommands(
           await vscode.window.showTextDocument(doc);
         } catch (error) {
           vscode.window.showErrorMessage(
-            `Pubspec Master: Failed to open file: ${error instanceof Error ? error.message : String(error)}`
+            `Moinsen: Failed to open file: ${error instanceof Error ? error.message : String(error)}`
           );
         }
       }
@@ -108,18 +108,18 @@ export function registerCommands(
         await vscode.window.withProgress(
           {
             location: vscode.ProgressLocation.Notification,
-            title: `Pubspec Master: Running pub get for ${pkg.name}`,
+            title: `Moinsen: Running pub get for ${pkg.name}`,
           },
           async () => {
             const result = await runPubGet(pkg.directory, isFlutter);
 
             if (result.exitCode === 0) {
               vscode.window.showInformationMessage(
-                `Pubspec Master: Pub get completed for ${pkg.name}`
+                `Moinsen: Pub get completed for ${pkg.name}`
               );
             } else {
               vscode.window.showErrorMessage(
-                `Pubspec Master: Pub get failed for ${pkg.name}: ${result.stderr}`
+                `Moinsen: Pub get failed for ${pkg.name}: ${result.stderr}`
               );
             }
           }
@@ -143,18 +143,18 @@ export function registerCommands(
         await vscode.window.withProgress(
           {
             location: vscode.ProgressLocation.Notification,
-            title: `Pubspec Master: Running pub upgrade for ${pkg.name}`,
+            title: `Moinsen: Running pub upgrade for ${pkg.name}`,
           },
           async () => {
             const result = await runPubUpgrade(pkg.directory, isFlutter);
 
             if (result.exitCode === 0) {
               vscode.window.showInformationMessage(
-                `Pubspec Master: Pub upgrade completed for ${pkg.name}`
+                `Moinsen: Pub upgrade completed for ${pkg.name}`
               );
             } else {
               vscode.window.showErrorMessage(
-                `Pubspec Master: Pub upgrade failed for ${pkg.name}: ${result.stderr}`
+                `Moinsen: Pub upgrade failed for ${pkg.name}: ${result.stderr}`
               );
             }
           }
@@ -184,13 +184,13 @@ export function registerCommands(
     vscode.commands.registerCommand('pubspecMaster.syncAllVersions', async () => {
       const packages = dashboardProvider.getPackages();
       if (packages.length === 0) {
-        vscode.window.showWarningMessage('Pubspec Master: No packages found in workspace.');
+        vscode.window.showWarningMessage('Moinsen: No packages found in workspace.');
         return;
       }
 
       const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!workspaceRoot) {
-        vscode.window.showErrorMessage('Pubspec Master: No workspace folder open.');
+        vscode.window.showErrorMessage('Moinsen: No workspace folder open.');
         return;
       }
 
@@ -202,7 +202,7 @@ export function registerCommands(
 
       const fixableConflicts = analysis.conflicts.filter(c => c.suggestedResolution);
       if (fixableConflicts.length === 0) {
-        vscode.window.showInformationMessage('Pubspec Master: No version conflicts to fix.');
+        vscode.window.showInformationMessage('Moinsen: No version conflicts to fix.');
         return;
       }
 
@@ -231,13 +231,13 @@ export function registerCommands(
 
           if (result.success) {
             vscode.window.showInformationMessage(
-              `Pubspec Master: Fixed all conflicts - Updated ${result.filesUpdated.length} file(s)` +
+              `Moinsen: Fixed all conflicts - Updated ${result.filesUpdated.length} file(s)` +
               (result.backupPath ? `. Backup saved.` : '')
             );
             dashboardProvider.refresh();
           } else {
             vscode.window.showWarningMessage(
-              `Pubspec Master: Partially completed - ${result.filesUpdated.length} updated, ${result.errors.length} failed`
+              `Moinsen: Partially completed - ${result.filesUpdated.length} updated, ${result.errors.length} failed`
             );
             dashboardProvider.refresh();
           }
@@ -267,7 +267,7 @@ export function registerCommands(
     vscode.commands.registerCommand('pubspecMaster.showMigrationWizard', () => {
       const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!workspaceRoot) {
-        vscode.window.showErrorMessage('Pubspec Master: No workspace folder open.');
+        vscode.window.showErrorMessage('Moinsen: No workspace folder open.');
         return;
       }
       MigrationWizard.createOrShow(context.extensionUri, workspaceRoot);
@@ -279,7 +279,7 @@ export function registerCommands(
     vscode.commands.registerCommand('pubspecMaster.createConfig', async () => {
       const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!workspaceRoot) {
-        vscode.window.showErrorMessage('Pubspec Master: No workspace folder open.');
+        vscode.window.showErrorMessage('Moinsen: No workspace folder open.');
         return;
       }
 
@@ -314,7 +314,7 @@ export function registerCommands(
     vscode.commands.registerCommand('pubspecMaster.openConfig', async () => {
       const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!workspaceRoot) {
-        vscode.window.showErrorMessage('Pubspec Master: No workspace folder open.');
+        vscode.window.showErrorMessage('Moinsen: No workspace folder open.');
         return;
       }
 

@@ -71,7 +71,7 @@ export class MigrationWizard {
     // Create new panel
     const panel = vscode.window.createWebviewPanel(
       'pubspecMaster.migrationWizard',
-      'Migration Wizard',
+      'Moinsen Migration Wizard',
       column || vscode.ViewColumn.One,
       {
         enableScripts: true,
@@ -306,7 +306,7 @@ export class MigrationWizard {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
-  <title>Migration Wizard</title>
+  <title>Moinsen Migration Wizard</title>
   <style>
     ${this.getStyles()}
   </style>

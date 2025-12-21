@@ -80,7 +80,7 @@ export class GraphPanel implements vscode.Disposable {
     // Create new panel
     const panel = vscode.window.createWebviewPanel(
       GraphPanel.viewType,
-      'Dependency Graph',
+      'Moinsen Dependency Graph',
       column,
       {
         enableScripts: true,
@@ -275,7 +275,7 @@ export class GraphPanel implements vscode.Disposable {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src ${webview.cspSource} data:; font-src ${webview.cspSource};">
-  <title>Dependency Graph</title>
+  <title>Moinsen Dependency Graph</title>
   <style>
     :root {
       --pm-primary: var(--vscode-button-background);

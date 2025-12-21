@@ -1,8 +1,10 @@
-# Pubspec Master
+# Moinsen Pubspec Master
 
-**The ultimate Flutter/Dart monorepo management extension for VS Code**
+**The ultimate Flutter/Dart monorepo management extension for VS Code by Moinsen**
 
-Pubspec Master provides a complete toolkit for managing multi-package Flutter and Dart workspaces. Visualize dependencies, detect conflicts, migrate to Pub Workspaces, and keep your monorepo healthy.
+Moinsen Pubspec Master provides a complete toolkit for managing multi-package Flutter and Dart workspaces. Visualize dependencies, detect conflicts, migrate to Pub Workspaces, and keep your monorepo healthy.
+
+> **Looking for private package hosting?** Check out [Moinsen Pub](https://moinsen.pub) - self-hosted private package repository with automated maintenance.
 
 ## Features
 
@@ -50,16 +52,42 @@ Stay up to date with the latest versions:
 - Update individual packages
 - Bulk update all outdated packages
 
+### Package Health Warnings
+
+Protect your project from unmaintained dependencies:
+- **Critical warnings** for packages not updated in 2+ years
+- **Warnings** for packages not updated in 1+ year
+- **Detection** of discontinued packages on pub.dev
+- **Quality scores** flagging low-quality packages
+- **"Find Alternatives"** button opens pub.dev search
+- **Configurable thresholds** via VS Code settings
+- **Problems panel** integration for quick navigation
+
+### GitHub Repository Analysis 🚀
+
+Deep insights into package maintenance health:
+- **Real-time GitHub metrics** - stars, issues, PRs, last commit
+- **Security advisories** - critical alerts for vulnerable packages
+- **Archived detection** - warns when repositories are abandoned
+- **Stale repos** - identifies repos with no recent activity
+- **Issue/PR responsiveness** - flags slow maintainer response
+- **Risk Score (0-100)** - comprehensive health assessment combining:
+  - pub.dev quality score (30%)
+  - Days since update (25%)
+  - GitHub issue/star ratio (15%)
+  - PR responsiveness (15%)
+  - Security & status flags (15%)
+
 ## Installation
 
 1. Open VS Code
 2. Go to Extensions (Ctrl+Shift+X / Cmd+Shift+X)
-3. Search for "Pubspec Master"
+3. Search for "Moinsen Pubspec Master"
 4. Click Install
 
 Or install via command line:
 ```bash
-code --install-extension moinsen-dev.pubspec-master
+code --install-extension moinsen.pubspec-master
 ```
 
 ## Usage
@@ -67,7 +95,7 @@ code --install-extension moinsen-dev.pubspec-master
 ### Quick Start
 
 1. Open a Flutter/Dart project or monorepo
-2. Click the Pubspec Master icon in the Activity Bar
+2. Click the Moinsen Pubspec Master icon in the Activity Bar
 3. View your packages in the sidebar
 4. Click "Dashboard" in the toolbar for the full view
 
@@ -87,21 +115,21 @@ code --install-extension moinsen-dev.pubspec-master
 
 Access via Command Palette (Ctrl+Shift+P / Cmd+Shift+P):
 
-- `Pubspec Master: Show Dashboard` - Open the main dashboard
-- `Pubspec Master: Show Dependency Graph` - Open interactive graph
-- `Pubspec Master: Migration Wizard` - Start workspace migration
-- `Pubspec Master: Run Pub Get (All Packages)` - Run pub get everywhere
-- `Pubspec Master: Run Pub Upgrade (All Packages)` - Upgrade all packages
-- `Pubspec Master: Sync All Versions` - Fix all version conflicts
-- `Pubspec Master: Refresh` - Refresh package data
-- `Pubspec Master: Create Configuration File` - Create .pubspec-master.json
-- `Pubspec Master: Open Configuration File` - Edit workspace config
+- `Moinsen Pubspec Master: Show Dashboard` - Open the main dashboard
+- `Moinsen Pubspec Master: Show Dependency Graph` - Open interactive graph
+- `Moinsen Pubspec Master: Migration Wizard` - Start workspace migration
+- `Moinsen Pubspec Master: Run Pub Get (All Packages)` - Run pub get everywhere
+- `Moinsen Pubspec Master: Run Pub Upgrade (All Packages)` - Upgrade all packages
+- `Moinsen Pubspec Master: Sync All Versions` - Fix all version conflicts
+- `Moinsen Pubspec Master: Refresh` - Refresh package data
+- `Moinsen Pubspec Master: Create Configuration File` - Create .pubspec-master.json
+- `Moinsen Pubspec Master: Open Configuration File` - Edit workspace config
 
 ## Configuration
 
 ### VS Code Settings
 
-Configure via Settings (Ctrl+, / Cmd+,) under "Pubspec Master":
+Configure via Settings (Ctrl+, / Cmd+,) under "Moinsen Pubspec Master":
 
 ```json
 {
@@ -159,6 +187,16 @@ Create `.pubspec-master.json` in your workspace root for project-specific settin
 | `sync.ignoredDependencies` | `[]` | Dependencies to skip |
 | `sync.analyzeAfterFix` | `false` | Run flutter analyze after fix |
 | `output.showTerminal` | `true` | Show terminal for commands |
+| `health.enabled` | `true` | Enable package health warnings |
+| `health.unmaintainedThresholdDays` | `365` | Days to consider unmaintained (warning) |
+| `health.criticalThresholdDays` | `730` | Days to consider critical |
+| `health.checkDiscontinued` | `true` | Check for discontinued packages |
+| `health.minScoreThreshold` | `50` | Minimum quality score (0-160) |
+| `github.enabled` | `true` | Enable GitHub repository analysis |
+| `github.token` | `""` | GitHub token for higher rate limits |
+| `github.cacheTtlMinutes` | `60` | GitHub metrics cache duration |
+| `github.highIssueCountThreshold` | `100` | Issues to trigger warning |
+| `github.staleRepoThresholdDays` | `180` | Days without commits to flag |
 
 ## Requirements
 
@@ -171,7 +209,7 @@ Create `.pubspec-master.json` in your workspace root for project-specific settin
 
 - Check if pubspec.yaml files are valid YAML
 - Verify files aren't in excluded patterns
-- Try "Pubspec Master: Refresh"
+- Try "Moinsen Pubspec Master: Refresh"
 
 ### Offline mode
 
@@ -187,7 +225,7 @@ The extension caches pub.dev data for offline use. If you see "Offline mode":
 
 ## Contributing
 
-Contributions are welcome! Please see our [GitHub repository](https://github.com/moinsen-dev/pubspec-master) for:
+Contributions are welcome! Please see our [GitHub repository](https://github.com/moinsen-dev/moinsen-pubspec-master) for:
 - Bug reports
 - Feature requests
 - Pull requests
@@ -200,6 +238,17 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
+## Moinsen Ecosystem
+
+This extension is part of the **Moinsen** ecosystem for Flutter/Dart developers:
+
+- **Moinsen Pubspec Master** (this extension) - Free, open-source monorepo management
+- **[Moinsen Pub](https://moinsen.pub)** - Self-hosted private package repository with:
+  - Private Dart/Flutter package hosting
+  - Automated package maintenance
+  - Team collaboration features
+  - CI/CD integration
+
 ---
 
-Made with love for the Flutter community by [moinsen-dev](https://github.com/moinsen-dev)
+Made with love for the Flutter community by [Moinsen](https://moinsen.pub)

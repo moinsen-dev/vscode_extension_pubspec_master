@@ -1,4 +1,4 @@
-# Pubspec Master - Product Requirements Document
+# Moinsen Pubspec Master - Product Requirements Document
 
 **Version:** 1.0
 **Date:** December 21, 2025
@@ -29,6 +29,7 @@
 10. [Release Plan](#release-plan)
 11. [Risks and Mitigations](#risks-and-mitigations)
 12. [Appendix](#appendix)
+13. [Moinsen Ecosystem](#moinsen-ecosystem)
 
 ---
 
@@ -36,7 +37,9 @@
 
 ### Vision
 
-**Pubspec Master** is an open-source VS Code extension that revolutionizes Flutter/Dart monorepo management. It provides a unified dashboard, interactive dependency visualization, guided migration tools, and intelligent version synchronization—bringing the sophistication of JavaScript's Nx/Lerna ecosystem to Flutter developers.
+**Moinsen Pubspec Master** is an open-source VS Code extension that revolutionizes Flutter/Dart monorepo management. It provides a unified dashboard, interactive dependency visualization, guided migration tools, and intelligent version synchronization—bringing the sophistication of JavaScript's Nx/Lerna ecosystem to Flutter developers.
+
+> **Part of the Moinsen Ecosystem:** This extension integrates with [Moinsen Pub](https://moinsen.pub) for teams that need private package hosting, automated maintenance, and enterprise-grade dependency management.
 
 ### Key Value Propositions
 
@@ -81,8 +84,8 @@ No dependency visualization         Hard to understand impact of changes
 
 ### Market Gap Analysis
 
-| Capability | Pubspec Assist | Pub Manager | Melos | Version Lens | Pub Workspaces | **Pubspec Master** |
-|------------|:--------------:|:-----------:|:-----:|:------------:|:--------------:|:------------------:|
+| Capability | Pubspec Assist | Pub Manager | Melos | Version Lens | Pub Workspaces | **Moinsen Pubspec Master** |
+|------------|:--------------:|:-----------:|:-----:|:------------:|:--------------:|:---------------------------:|
 | Single file editing | ✅ | ✅ | - | - | - | ✅ |
 | Monorepo awareness | ❌ | ❌ | ✅ | ❌ | ✅ | ✅ |
 | Visual dashboard | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
@@ -90,6 +93,7 @@ No dependency visualization         Hard to understand impact of changes
 | Version sync | ❌ | ❌ | Partial | ❌ | ❌ | ✅ |
 | Migration wizard | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | GUI for all features | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Private pkg hosting | ❌ | ❌ | ❌ | ❌ | ❌ | via Moinsen Pub |
 
 **Conclusion:** No existing tool provides a comprehensive GUI-based monorepo management experience.
 
@@ -204,7 +208,7 @@ No dependency visualization         Hard to understand impact of changes
 
 ```
 ┌─────────────────────────────────────────────────┐
-│ 📦 PUBSPEC MASTER                          ⚙️ ⟳ │
+│ 📦 MOINSEN PUBSPEC MASTER                  ⚙️ ⟳ │
 ├─────────────────────────────────────────────────┤
 │ 📊 Workspace: my_flutter_monorepo              │
 │                                                 │
@@ -823,7 +827,7 @@ interface OfflineCache {
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ ⚙️ PUBSPEC MASTER SETTINGS                                   │
+│ ⚙️ MOINSEN PUBSPEC MASTER SETTINGS                           │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
 │ 📂 Scanning                                                  │
@@ -917,10 +921,10 @@ class TelemetryService {
 A `PRIVACY.md` file will be included in the repository:
 
 ```markdown
-# Privacy Policy - Pubspec Master
+# Privacy Policy - Moinsen Pubspec Master
 
 ## Summary
-Pubspec Master collects NO data by default. Anonymous usage telemetry
+Moinsen Pubspec Master collects NO data by default. Anonymous usage telemetry
 is available as an opt-in feature to help improve the extension.
 
 ## What We Collect (Opt-In Only)
@@ -930,7 +934,7 @@ is available as an opt-in feature to help improve the extension.
 [List from 6.8.2]
 
 ## How to Opt In/Out
-Settings > Pubspec Master > Enable anonymous usage telemetry
+Settings > Moinsen Pubspec Master > Enable anonymous usage telemetry
 
 ## Data Retention
 Telemetry data is retained for 90 days, then automatically deleted.
@@ -1157,7 +1161,7 @@ All user-facing strings will be externalized from the start:
 // src/i18n/messages.ts
 export const messages = {
   dashboard: {
-    title: 'Pubspec Master',
+    title: 'Moinsen Pubspec Master',
     packages: 'Packages',
     conflicts: 'Conflicts',
     updates: 'Updates Available',
@@ -1536,6 +1540,40 @@ Based on analysis of:
 | Constraint | Version specification (e.g., `^1.0.0`) |
 | Resolution | Process of determining exact versions |
 | Transitive dependency | Dependency of a dependency |
+
+---
+
+## 13. Moinsen Ecosystem
+
+### 13.1 Product Family
+
+**Moinsen Pubspec Master** is part of the Moinsen ecosystem for Flutter/Dart developers:
+
+| Product | Type | Description |
+|---------|------|-------------|
+| **Moinsen Pubspec Master** | Free, Open Source | VS Code extension for monorepo management |
+| **Moinsen Pub** | Commercial | Self-hosted private package repository |
+
+### 13.2 Moinsen Pub Integration (Future)
+
+For teams using [Moinsen Pub](https://moinsen.pub), the extension will support:
+
+| Feature | Description |
+|---------|-------------|
+| Private package discovery | See private packages in dependency graph |
+| Team version policies | Enforce version constraints across team |
+| Automated maintenance | Integration with Moinsen Pub's update automation |
+| CI/CD integration | Status indicators for publish pipelines |
+
+### 13.3 Branding Guidelines
+
+| Element | Value |
+|---------|-------|
+| Full name | Moinsen Pubspec Master |
+| Short name | Pubspec Master (in UI where space is limited) |
+| Extension ID | `pubspec-master` (backward compatible) |
+| Config prefix | `pubspecMaster.*` (backward compatible) |
+| Config file | `.pubspec-master.json` (backward compatible) |
 
 ---
 

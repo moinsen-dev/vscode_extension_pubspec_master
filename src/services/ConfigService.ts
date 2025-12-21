@@ -141,7 +141,7 @@ export class ConfigService {
     );
 
     vscode.window.showInformationMessage(
-      `Created ${CONFIG_FILE_NAME} in workspace root`
+      `Moinsen: Created ${CONFIG_FILE_NAME} in workspace root`
     );
   }
 
@@ -298,17 +298,17 @@ export class ConfigService {
 
     this.configWatcher.onDidChange(() => {
       this.invalidateCache();
-      vscode.window.showInformationMessage('Pubspec Master config reloaded');
+      vscode.window.showInformationMessage('Moinsen config reloaded');
     });
 
     this.configWatcher.onDidCreate(() => {
       this.invalidateCache();
-      vscode.window.showInformationMessage('Pubspec Master config loaded');
+      vscode.window.showInformationMessage('Moinsen config loaded');
     });
 
     this.configWatcher.onDidDelete(() => {
       this.invalidateCache();
-      vscode.window.showInformationMessage('Pubspec Master config removed');
+      vscode.window.showInformationMessage('Moinsen config removed');
     });
   }
 }

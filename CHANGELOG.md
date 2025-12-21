@@ -1,9 +1,107 @@
 # Changelog
 
-All notable changes to Pubspec Master will be documented in this file.
+All notable changes to Moinsen Pubspec Master will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.7.0] - 2025-12-21
+
+### Added
+- **GitHub Repository Integration** 🚀
+  - Fetches real-time metrics from GitHub repositories
+  - Shows open issues, open PRs, stars, and last commit date
+  - Detects archived repositories (critical warning)
+  - Detects security advisories (critical warning)
+  - Identifies stale repositories (no commits in 6+ months)
+  - Flags high issue counts relative to package popularity
+
+- **Package Risk Score** (0-100)
+  - Comprehensive risk calculation combining:
+    - pub.dev quality score (30% weight)
+    - Days since last update (25% weight)
+    - GitHub issue/star ratio (15% weight)
+    - PR responsiveness (15% weight)
+    - Security & status flags (15% weight)
+  - Visual risk badges in dashboard
+  - Issues sorted by risk score (highest first)
+
+- **New GitHub Settings**:
+  - `pubspecMaster.github.enabled` - Enable/disable GitHub analysis
+  - `pubspecMaster.github.token` - Optional token for higher rate limits
+  - `pubspecMaster.github.cacheTtlMinutes` - Cache duration (default: 60)
+  - `pubspecMaster.github.highIssueCountThreshold` - Issue count warning threshold
+  - `pubspecMaster.github.staleRepoThresholdDays` - Stale repo threshold (default: 180)
+
+- **Enhanced Dashboard UI**:
+  - GitHub metrics displayed with icons and stats
+  - Direct links to GitHub issues and repository
+  - "View Issues" button for packages with open issues
+  - New badge styles for security, archived, and stale issues
+
+### Changed
+- Health analysis now includes GitHub repository metrics
+- Risk-based sorting prioritizes most concerning packages
+- Improved icon set for different issue types
+
+## [0.6.3] - 2025-12-21
+
+### Added
+- **Package Health Warnings**: Detect unmaintained and risky dependencies
+  - Warns about packages not updated in 1+ years (warning level)
+  - Critical warnings for packages not updated in 2+ years
+  - Detects packages marked as discontinued on pub.dev
+  - Flags packages with low quality scores (<50/160)
+  - Shows "Find Alternatives" button for critical issues
+  - Configurable thresholds via VS Code settings
+
+- **New Settings for Package Health**:
+  - `pubspecMaster.health.enabled` - Enable/disable health warnings
+  - `pubspecMaster.health.unmaintainedThresholdDays` - Warning threshold (default: 365 days)
+  - `pubspecMaster.health.criticalThresholdDays` - Critical threshold (default: 730 days)
+  - `pubspecMaster.health.checkDiscontinued` - Check discontinued packages
+  - `pubspecMaster.health.minScoreThreshold` - Minimum quality score (default: 50)
+
+- **Dashboard Package Health Section**:
+  - Visual display of health issues with severity badges
+  - Details on last update date and affected packages
+  - Contextual suggestions for each issue
+
+- **Problems Panel Integration**:
+  - Health issues now appear in VS Code Problems panel
+  - Click to navigate directly to dependency in pubspec.yaml
+
+### Changed
+- "Check Updates" button now also checks package health
+- Health analysis runs automatically with update checks
+- Updated notification messages to include health issue counts
+
+## [0.6.2] - 2025-12-21
+
+### Added
+- Moinsen Pub integration settings in VS Code configuration
+  - `pubspecMaster.moinsenPub.enabled` - Enable private package hosting
+  - `pubspecMaster.moinsenPub.serverUrl` - Configure your Moinsen Pub server
+- Project CLAUDE.md with branding and development guidelines
+- Updated PRD with Moinsen ecosystem section
+
+## [0.6.1] - 2025-12-21
+
+### Fixed
+- Duplicate action items in sidebar toolbar dropdown menu
+- Expand All button now positioned next to Collapse All button
+
+## [0.6.0] - 2025-12-21
+
+### Changed
+- **Rebranded to Moinsen Pubspec Master**
+  - Extension now part of the Moinsen ecosystem
+  - Updated display name, descriptions, and UI text
+  - All existing configurations and settings remain compatible
+
+### Added
+- Promotional links to Moinsen Pub for private package hosting
+- Updated documentation with Moinsen ecosystem information
 
 ## [0.5.0] - 2025-12-21
 

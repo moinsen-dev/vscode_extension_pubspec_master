@@ -91,3 +91,70 @@ export interface PubspecParseError {
   /** Column number where error occurred (if available) */
   column?: number;
 }
+
+/**
+ * Issue type for package health warnings
+ */
+export type PackageHealthIssueType =
+  | 'unmaintained'
+  | 'discontinued'
+  | 'low-quality'
+  | 'archived'
+  | 'security-advisory'
+  | 'high-issue-count'
+  | 'stale-repo';
+
+/**
+ * Severity level for package health issues
+ */
+export type PackageHealthSeverity = 'critical' | 'warning' | 'info';
+
+/**
+ * GitHub repository metrics for package health assessment
+ */
+export interface GitHubHealthMetrics {
+  /** Repository owner/repo (e.g., "dart-lang/sdk") */
+  repoFullName?: string;
+  /** Number of open issues */
+  openIssues?: number;
+  /** Number of open pull requests */
+  openPRs?: number;
+  /** Days since last commit */
+  daysSinceLastCommit?: number;
+  /** Number of stars */
+  stars?: number;
+  /** Whether the repository is archived */
+  isArchived?: boolean;
+  /** Number of security advisories */
+  securityAdvisoryCount?: number;
+  /** License type */
+  license?: string;
+}
+
+/**
+ * Represents a package health issue detected in the workspace
+ */
+export interface PackageHealthIssue {
+  /** The dependency package with the health issue */
+  packageName: string;
+  /** Type of health issue */
+  issueType: PackageHealthIssueType;
+  /** Severity level */
+  severity: PackageHealthSeverity;
+  /** Days since the package was last updated on pub.dev */
+  daysSinceUpdate: number;
+  /** ISO date string of last update on pub.dev */
+  lastUpdated?: string;
+  /** Package score from pub.dev (0-160) */
+  score?: number;
+  /** List of workspace packages that depend on this package */
+  usedBy: string[];
+  /** Human-readable message describing the issue */
+  message: string;
+  /** Suggested action to resolve the issue */
+  suggestion: string;
+  /** GitHub repository metrics (if available) */
+  github?: GitHubHealthMetrics;
+  /** Calculated risk score (0-100, higher = more risky) */
+  riskScore?: number;
+}

@@ -2,7 +2,7 @@
  * Extension constants
  */
 export const EXTENSION_ID = 'pubspec-master';
-export const EXTENSION_NAME = 'Pubspec Master';
+export const EXTENSION_NAME = 'Moinsen Pubspec Master';
 
 /**
  * View IDs

@@ -13,7 +13,7 @@ export async function pubGetAllCommand(
   const packages = getPackages();
 
   if (packages.length === 0) {
-    vscode.window.showInformationMessage('Pubspec Master: No packages found in workspace.');
+    vscode.window.showInformationMessage('Moinsen: No packages found in workspace.');
     return;
   }
 
@@ -24,7 +24,7 @@ export async function pubGetAllCommand(
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: 'Pubspec Master: Running pub get',
+      title: 'Moinsen: Running pub get',
       cancellable: true,
     },
     async (progress, token) => {
@@ -33,7 +33,7 @@ export async function pubGetAllCommand(
 
       for (const pkg of packages) {
         if (token.isCancellationRequested) {
-          vscode.window.showWarningMessage('Pubspec Master: Pub get cancelled.');
+          vscode.window.showWarningMessage('Moinsen: Pub get cancelled.');
           return;
         }
 
@@ -66,11 +66,11 @@ export async function pubGetAllCommand(
 
       if (failed.length === 0) {
         vscode.window.showInformationMessage(
-          `Pubspec Master: Pub get completed for ${packages.length} package(s). See Output for details.`
+          `Moinsen: Pub get completed for ${packages.length} package(s). See Output for details.`
         );
       } else {
         vscode.window.showWarningMessage(
-          `Pubspec Master: Pub get failed for: ${failed.join(', ')}. See Output for details.`
+          `Moinsen: Pub get failed for: ${failed.join(', ')}. See Output for details.`
         );
       }
     }

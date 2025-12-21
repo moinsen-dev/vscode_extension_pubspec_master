@@ -218,17 +218,17 @@ export class DashboardProvider
       for (const error of this.scanResult.parseErrors) {
         const fileName = path.basename(path.dirname(error.path));
         vscode.window.showWarningMessage(
-          `Pubspec Master: Failed to parse ${fileName}/pubspec.yaml: ${error.message}`
+          `Moinsen: Failed to parse ${fileName}/pubspec.yaml: ${error.message}`
         );
       }
 
       // Log scan summary
       console.log(
-        `Pubspec Master: Scanned ${this.packages.length} packages in ${this.scanResult.scanDurationMs}ms`
+        `Moinsen Pubspec Master: Scanned ${this.packages.length} packages in ${this.scanResult.scanDurationMs}ms`
       );
     } catch (error) {
       vscode.window.showErrorMessage(
-        `Pubspec Master: Failed to scan workspace: ${error instanceof Error ? error.message : String(error)}`
+        `Moinsen: Failed to scan workspace: ${error instanceof Error ? error.message : String(error)}`
       );
       this.packages = [];
     }
