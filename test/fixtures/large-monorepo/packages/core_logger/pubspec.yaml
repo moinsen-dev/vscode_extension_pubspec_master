@@ -1,0 +1,10 @@
+name: core_logger
+description: Structured logging with levels and formatters.
+version: 1.0.0
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+resolution: workspace
+
+dependencies: {}

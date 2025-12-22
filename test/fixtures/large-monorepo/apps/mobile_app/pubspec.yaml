@@ -1,0 +1,43 @@
+name: mobile_app
+description: Main mobile application.
+version: 2.0.0
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+  flutter: '>=3.24.0'
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  core_utils:
+    path: ../../packages/core_utils
+  core_logger:
+    path: ../../packages/core_logger
+  core_http:
+    path: ../../packages/core_http
+  core_auth:
+    path: ../../packages/core_auth
+  core_router:
+    path: ../../packages/core_router
+  ui_components:
+    path: ../../packages/ui_components
+  ui_theme:
+    path: ../../packages/ui_theme
+  feature_auth:
+    path: ../../packages/feature_auth
+  feature_dashboard:
+    path: ../../packages/feature_dashboard
+  feature_profile:
+    path: ../../packages/feature_profile
+  feature_settings:
+    path: ../../packages/feature_settings
+  data_models:
+    path: ../../packages/data_models
+  data_repository:
+    path: ../../packages/data_repository
+  service_push:
+    path: ../../packages/service_push
+  service_analytics:
+    path: ../../packages/service_analytics

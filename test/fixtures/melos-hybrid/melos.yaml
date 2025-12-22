@@ -1,0 +1,10 @@
+name: melos_hybrid_example
+
+packages:
+  - packages/*
+
+command:
+  version:
+    message: "chore: release %v"
+  bootstrap:
+    runPubGetInParallel: true

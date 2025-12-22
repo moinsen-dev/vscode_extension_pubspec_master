@@ -94,13 +94,13 @@ export class MigrationAnalyzer {
       sdkConstraint: pkg.sdkConstraint,
       hasResolutionWorkspace: pkg.resolutionMode === 'workspace',
       dependencyCount:
-        Object.keys(pkg.dependencies).length + Object.keys(pkg.devDependencies).length,
+        pkg.dependencies.size + pkg.devDependencies.size,
     }));
 
     // Calculate total dependencies
     const totalDependencies = packages.reduce(
       (sum, pkg) =>
-        sum + Object.keys(pkg.dependencies).length + Object.keys(pkg.devDependencies).length,
+        sum + pkg.dependencies.size + pkg.devDependencies.size,
       0
     );
 

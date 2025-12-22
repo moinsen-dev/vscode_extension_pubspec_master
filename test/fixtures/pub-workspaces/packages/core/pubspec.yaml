@@ -1,0 +1,11 @@
+name: core
+description: Core package with resolution workspace.
+version: 1.0.0
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+resolution: workspace
+
+dependencies:
+  meta: ^1.10.0

@@ -1,0 +1,60 @@
+name: large_monorepo
+description: A large monorepo with 50+ packages for performance testing.
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+workspace:
+  - packages/core_utils
+  - packages/core_logger
+  - packages/core_http
+  - packages/core_auth
+  - packages/core_storage
+  - packages/core_cache
+  - packages/core_config
+  - packages/core_di
+  - packages/core_router
+  - packages/core_state
+  - packages/ui_components
+  - packages/ui_theme
+  - packages/ui_forms
+  - packages/ui_dialogs
+  - packages/ui_charts
+  - packages/ui_animations
+  - packages/ui_layout
+  - packages/ui_navigation
+  - packages/ui_icons
+  - packages/ui_typography
+  - packages/feature_auth
+  - packages/feature_profile
+  - packages/feature_settings
+  - packages/feature_dashboard
+  - packages/feature_analytics
+  - packages/feature_notifications
+  - packages/feature_payments
+  - packages/feature_search
+  - packages/feature_chat
+  - packages/feature_files
+  - packages/data_models
+  - packages/data_repository
+  - packages/data_api
+  - packages/data_local
+  - packages/data_sync
+  - packages/data_migration
+  - packages/data_cache
+  - packages/data_queue
+  - packages/data_validators
+  - packages/data_mappers
+  - packages/service_push
+  - packages/service_analytics
+  - packages/service_crash
+  - packages/service_remote_config
+  - packages/service_ab_testing
+  - packages/service_feature_flags
+  - packages/service_deep_links
+  - packages/service_share
+  - packages/service_calendar
+  - packages/service_location
+  - apps/mobile_app
+  - apps/web_app
+  - apps/admin_panel

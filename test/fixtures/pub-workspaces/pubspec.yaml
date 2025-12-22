@@ -1,0 +1,10 @@
+name: pub_workspaces_example
+description: A workspace already using Pub Workspaces (Dart 3.6+).
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+workspace:
+  - packages/core
+  - packages/ui
+  - packages/app

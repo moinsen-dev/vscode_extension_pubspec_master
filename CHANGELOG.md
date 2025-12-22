@@ -5,6 +5,39 @@ All notable changes to Moinsen Pubspec Master will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2025-12-22
+
+### Added
+- **Comprehensive Test Suite** (211+ unit tests)
+  - VersionAnalyzer tests (48 cases) - conflict detection, health scoring, risk calculation
+  - DependencyResolver tests (37 cases) - graph building, cycle detection, impact analysis
+  - MigrationAnalyzer tests (19 cases) - workspace state, SDK version, blockers
+  - ConfigService tests (17 cases) - config merging, file parsing
+  - API client tests (73 cases) - PubDevClient, GitHubClient
+
+- **Performance Benchmarks**
+  - All operations meet performance targets
+  - Scan 53 packages in <4ms (target: 2000ms)
+  - Build 50-node dependency graph in <1ms (target: 100ms)
+  - Conflict detection in <1ms (target: 50ms)
+
+- **Test Fixtures**
+  - Large monorepo fixture (53 packages) for performance testing
+  - Conflict workspace fixture with pre-seeded version conflicts
+  - Pub Workspaces fixture (already migrated)
+  - Melos hybrid fixture (Melos + Pub Workspaces)
+
+- **Privacy Policy** (PRIVACY.md)
+  - Clear documentation of data collection practices
+  - Details on pub.dev and GitHub API usage
+  - Information about local storage and caching
+
+### Fixed
+- MigrationAnalyzer bug: dependency counting now correctly uses Map.size
+
+### Changed
+- Added `test:perf` npm script for running performance benchmarks
+
 ## [0.7.0] - 2025-12-21
 
 ### Added

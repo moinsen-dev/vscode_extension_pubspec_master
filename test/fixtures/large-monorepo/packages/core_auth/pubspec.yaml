@@ -1,0 +1,10 @@
+name: core_auth
+description: Authentication state management.
+version: 1.0.0
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+resolution: workspace
+
+dependencies: {}

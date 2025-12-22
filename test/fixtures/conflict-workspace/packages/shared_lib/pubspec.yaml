@@ -1,0 +1,15 @@
+name: shared_lib
+description: Shared library with its own version constraints.
+version: 2.0.0
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+resolution: workspace
+
+dependencies:
+  # Conflict with all apps on http
+  http: ^1.1.0
+  # Uses logging - no conflict but adds complexity
+  logging: ^1.2.0
+  meta: ^1.10.0

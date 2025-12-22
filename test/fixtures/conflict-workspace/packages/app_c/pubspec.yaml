@@ -1,0 +1,21 @@
+name: app_c
+description: Third application with major version conflict.
+version: 1.0.0
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+  flutter: '>=3.22.0'
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # MAJOR version conflict: app_c uses http ^0.13.0 (major version differs!)
+  http: ^0.13.0
+  # Different major version of provider
+  provider: ^5.0.0
+  # Using older collection
+  collection: ^1.17.0
+  shared_lib:
+    path: ../shared_lib

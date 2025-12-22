@@ -1,0 +1,23 @@
+name: app_a
+description: First application with specific dependency versions.
+version: 1.0.0
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+  flutter: '>=3.24.0'
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Version conflict: app_a uses http ^1.0.0
+  http: ^1.0.0
+  # Version conflict: app_a uses provider ^6.0.0
+  provider: ^6.0.0
+  # Same version as app_b (no conflict)
+  collection: ^1.18.0
+  shared_lib:
+    path: ../shared_lib
+  data_layer:
+    path: ../data_layer

@@ -1,0 +1,33 @@
+name: web_app
+description: Web application.
+version: 2.0.0
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+  flutter: '>=3.24.0'
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  core_utils:
+    path: ../../packages/core_utils
+  core_http:
+    path: ../../packages/core_http
+  core_auth:
+    path: ../../packages/core_auth
+  ui_components:
+    path: ../../packages/ui_components
+  ui_theme:
+    path: ../../packages/ui_theme
+  feature_auth:
+    path: ../../packages/feature_auth
+  feature_dashboard:
+    path: ../../packages/feature_dashboard
+  data_models:
+    path: ../../packages/data_models
+  data_repository:
+    path: ../../packages/data_repository
+  service_analytics:
+    path: ../../packages/service_analytics

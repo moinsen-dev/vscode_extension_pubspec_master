@@ -1,0 +1,17 @@
+name: app
+description: Main application with resolution workspace.
+version: 1.0.0
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+  flutter: '>=3.24.0'
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  core:
+    path: ../core
+  ui:
+    path: ../ui

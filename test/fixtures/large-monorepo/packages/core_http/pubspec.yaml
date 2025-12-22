@@ -1,0 +1,10 @@
+name: core_http
+description: HTTP client wrapper with interceptors.
+version: 1.0.0
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+resolution: workspace
+
+dependencies: {}

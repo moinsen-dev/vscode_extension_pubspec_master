@@ -2,7 +2,7 @@
   "name": "pubspec-master",
   "displayName": "Moinsen Pubspec Master",
   "description": "Flutter/Dart monorepo management by Moinsen - Dashboard, dependency graph, migration tools, and private package support",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "publisher": "moinsen",
   "license": "MIT",
   "repository": {
@@ -147,11 +147,6 @@
           "command": "pubspecMaster.refresh",
           "when": "view == pubspecMaster.dashboard",
           "group": "navigation@1"
-        },
-        {
-          "command": "pubspecMaster.refresh",
-          "when": "view == pubspecMaster.dashboard",
-          "group": "1_actions@1"
         },
         {
           "command": "pubspecMaster.expandAll",
@@ -399,6 +394,7 @@
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "mocha --require ts-node/register 'test/unit/**/*.spec.ts'",
     "test:integration": "node ./out/test/runTests.js",
+    "test:perf": "npx ts-node test/performance/benchmarks.ts",
     "lint": "eslint src --ext ts",
     "lint:fix": "eslint src --ext ts --fix"
   },

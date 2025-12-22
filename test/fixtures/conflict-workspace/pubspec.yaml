@@ -1,0 +1,12 @@
+name: conflict_workspace
+description: A workspace with intentional version conflicts for testing.
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+workspace:
+  - packages/app_a
+  - packages/app_b
+  - packages/app_c
+  - packages/shared_lib
+  - packages/data_layer

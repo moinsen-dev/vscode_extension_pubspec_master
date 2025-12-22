@@ -1,0 +1,10 @@
+name: data_models
+description: Data models and entities.
+version: 1.0.0
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+resolution: workspace
+
+dependencies: {}
