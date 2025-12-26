@@ -10,16 +10,26 @@ import { VersionSyncService, ConfigService } from '../services';
 import { DependencyResolver, VersionAnalyzer } from '../core';
 
 /**
+ * Selection context from tree view
+ */
+export interface SelectionContext {
+  packages: PubspecInfo[] | undefined;
+  label: string | undefined;
+}
+
+/**
  * Register all extension commands
  *
  * @param context - Extension context
  * @param dashboardProvider - Dashboard provider instance
  * @param treeView - Tree view instance for expand/collapse operations
+ * @param getSelection - Function to get current tree selection context
  */
 export function registerCommands(
   context: vscode.ExtensionContext,
   dashboardProvider: DashboardProvider,
-  treeView?: vscode.TreeView<DashboardTreeItem>
+  treeView?: vscode.TreeView<DashboardTreeItem>,
+  getSelection?: () => SelectionContext
 ): void {
   // Refresh command - updates both tree view and webview panel
   context.subscriptions.push(
@@ -27,7 +37,9 @@ export function registerCommands(
       await dashboardProvider.refresh();
       // Also update the webview panel if it's open
       if (DashboardPanel.currentPanel) {
-        await DashboardPanel.currentPanel.updateData(dashboardProvider.getPackages());
+        const selection = getSelection?.();
+        const packagesToShow = selection?.packages ?? dashboardProvider.getPackages();
+        await DashboardPanel.currentPanel.updateData(packagesToShow, selection?.label);
       }
     })
   );
@@ -39,16 +51,22 @@ export function registerCommands(
         return;
       }
 
-      // Get all package items and reveal them with expand option
-      const packages = dashboardProvider.getPackages();
-      for (const pkg of packages) {
-        const item = new PackageTreeItem(pkg);
+      // Get cached package tree items (same instances used in tree view)
+      const packageItems = dashboardProvider.getPackageItems();
+      for (const item of packageItems) {
         try {
-          await treeView.reveal(item, { expand: true, select: false, focus: false });
+          await treeView.reveal(item, { expand: 2, select: false, focus: false });
         } catch {
           // Item might not be visible yet, continue with next
         }
       }
+    })
+  );
+
+  // Toggle view mode command - switches between hierarchical and logical views
+  context.subscriptions.push(
+    vscode.commands.registerCommand('pubspecMaster.toggleViewMode', () => {
+      dashboardProvider.toggleViewMode();
     })
   );
 
@@ -167,7 +185,9 @@ export function registerCommands(
   context.subscriptions.push(
     vscode.commands.registerCommand('pubspecMaster.showDashboard', async () => {
       const panel = DashboardPanel.createOrShow(context.extensionUri, context);
-      await panel.updateData(dashboardProvider.getPackages());
+      const selection = getSelection?.();
+      const packagesToShow = selection?.packages ?? dashboardProvider.getPackages();
+      await panel.updateData(packagesToShow, selection?.label);
     })
   );
 

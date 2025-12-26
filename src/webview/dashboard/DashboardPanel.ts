@@ -38,6 +38,7 @@ export class DashboardPanel implements vscode.Disposable {
     usedIn: string[];
   }> = [];
   private isCheckingUpdates = false;
+  private selectionContext?: string;  // Label describing what's selected in tree view
 
   private constructor(
     panel: vscode.WebviewPanel,
@@ -106,9 +107,12 @@ export class DashboardPanel implements vscode.Disposable {
 
   /**
    * Update the dashboard with new package data
+   * @param packages - Packages to display (filtered or all)
+   * @param selectionContext - Optional label describing the current selection (e.g., "admin_app", "example/")
    */
-  public async updateData(packages: PubspecInfo[]): Promise<void> {
+  public async updateData(packages: PubspecInfo[], selectionContext?: string): Promise<void> {
     this.packages = packages;
+    this.selectionContext = selectionContext;
     this.graph = this.dependencyResolver.buildGraph(packages);
     this.analysis = this.versionAnalyzer.analyze(packages, this.graph);
 
@@ -131,6 +135,12 @@ export class DashboardPanel implements vscode.Disposable {
   }): Promise<void> {
     switch (message.command) {
       case 'refresh':
+        await vscode.commands.executeCommand('pubspecMaster.refresh');
+        break;
+
+      case 'showAll':
+        // Clear selection by triggering refresh without selection context
+        this.selectionContext = undefined;
         await vscode.commands.executeCommand('pubspecMaster.refresh');
         break;
 
@@ -850,6 +860,7 @@ export class DashboardPanel implements vscode.Disposable {
         outdatedPackages: this.outdatedPackages,
         isCheckingUpdates: this.isCheckingUpdates,
         isOnline: this.pubDevClient.getOnlineStatus(),
+        selectionContext: this.selectionContext,  // Label for what's selected in tree view
       },
     });
   }
@@ -1076,6 +1087,17 @@ export class DashboardPanel implements vscode.Disposable {
     .empty-state { text-align: center; padding: 40px; color: var(--pm-neutral); }
     .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
 
+    .selection-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      background-color: var(--pm-primary);
+      color: var(--vscode-button-foreground);
+      margin-left: 12px;
+    }
+
     .offline-banner {
       background-color: rgba(255, 152, 0, 0.2);
       border: 1px solid var(--pm-warning);
@@ -1210,8 +1232,12 @@ export class DashboardPanel implements vscode.Disposable {
     <h1>
       <span>&#128230;</span>
       <span>Moinsen Pubspec Master</span>
+      <span class="selection-badge" id="selection-badge" style="display: none;"></span>
     </h1>
     <div class="header-actions">
+      <button class="btn btn-secondary" id="btn-show-all" style="display: none;">
+        <span>&#128203;</span> Show All
+      </button>
       <button class="btn btn-secondary" id="btn-refresh">
         <span>&#128260;</span> Refresh
       </button>
@@ -1359,6 +1385,10 @@ export class DashboardPanel implements vscode.Disposable {
       vscode.postMessage({ command: 'updateAllOutdated' });
     });
 
+    document.getElementById('btn-show-all').addEventListener('click', function() {
+      vscode.postMessage({ command: 'showAll' });
+    });
+
     // Message handlers
     window.addEventListener('message', function(event) {
       const message = event.data;
@@ -1368,6 +1398,18 @@ export class DashboardPanel implements vscode.Disposable {
     });
 
     function updateUI(data) {
+      // Update selection context badge and show all button
+      const selectionBadge = document.getElementById('selection-badge');
+      const showAllBtn = document.getElementById('btn-show-all');
+      if (data.selectionContext) {
+        selectionBadge.textContent = data.selectionContext;
+        selectionBadge.style.display = 'inline-block';
+        showAllBtn.style.display = 'flex';
+      } else {
+        selectionBadge.style.display = 'none';
+        showAllBtn.style.display = 'none';
+      }
+
       // Update stats using textContent (safe)
       document.getElementById('package-count').textContent = data.packages.length;
       document.getElementById('conflict-count').textContent = data.analysis?.conflicts?.length || 0;

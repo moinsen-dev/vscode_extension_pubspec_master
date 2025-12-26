@@ -4,3 +4,8 @@ node_modules
 .vscode-test/
 *.vsix
 .DS_Store
+
+# Example workspace (generated from baseline, not tracked)
+# Run ./scripts/example-setup.sh to create
+# The baseline is in example-baseline/ (tracked)
+example/

@@ -2,7 +2,7 @@
   "name": "pubspec-master",
   "displayName": "Moinsen Pubspec Master",
   "description": "Flutter/Dart monorepo management by Moinsen - Dashboard, dependency graph, migration tools, and private package support",
-  "version": "0.8.0",
+  "version": "0.14.0",
   "publisher": "moinsen",
   "license": "MIT",
   "repository": {
@@ -35,7 +35,7 @@
       "activitybar": [
         {
           "id": "pubspec-master",
-          "title": "Moinsen Pubspec Master",
+          "title": "Pubspec Master",
           "icon": "media/icons/pubspec-master.svg"
         }
       ]
@@ -139,6 +139,12 @@
         "title": "Open Configuration File",
         "icon": "$(settings-gear)",
         "category": "Pubspec Master"
+      },
+      {
+        "command": "pubspecMaster.toggleViewMode",
+        "title": "Toggle View Mode",
+        "icon": "$(list-tree)",
+        "category": "Pubspec Master"
       }
     ],
     "menus": {
@@ -149,19 +155,24 @@
           "group": "navigation@1"
         },
         {
-          "command": "pubspecMaster.expandAll",
-          "when": "view == pubspecMaster.dashboard",
-          "group": "navigation@6"
-        },
-        {
           "command": "pubspecMaster.showDashboard",
           "when": "view == pubspecMaster.dashboard",
-          "group": "navigation@7"
+          "group": "navigation@2"
         },
         {
           "command": "pubspecMaster.showGraph",
           "when": "view == pubspecMaster.dashboard",
-          "group": "navigation@8"
+          "group": "navigation@3"
+        },
+        {
+          "command": "pubspecMaster.toggleViewMode",
+          "when": "view == pubspecMaster.dashboard",
+          "group": "navigation@4"
+        },
+        {
+          "command": "pubspecMaster.expandAll",
+          "when": "view == pubspecMaster.dashboard",
+          "group": "navigation@9"
         },
         {
           "command": "pubspecMaster.pubGetAll",
@@ -264,6 +275,19 @@
           "type": "boolean",
           "default": true,
           "description": "Auto-refresh dashboard when pubspec.yaml files are saved"
+        },
+        "pubspecMaster.dashboard.viewMode": {
+          "type": "string",
+          "enum": [
+            "hierarchical",
+            "logical"
+          ],
+          "default": "hierarchical",
+          "enumDescriptions": [
+            "Group packages by folder structure (example/ → apps/ → admin_app)",
+            "Group by type: Apps and Packages categories"
+          ],
+          "description": "How to organize packages in the tree view"
         },
         "pubspecMaster.cache.ttlMinutes": {
           "type": "number",

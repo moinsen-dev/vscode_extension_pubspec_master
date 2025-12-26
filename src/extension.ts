@@ -1,12 +1,79 @@
 import * as vscode from 'vscode';
-import { DashboardProvider, DashboardTreeItem } from './providers/DashboardProvider';
+import * as path from 'path';
+import {
+  DashboardProvider,
+  DashboardTreeItem,
+  PackageTreeItem,
+  FolderGroupTreeItem,
+  AppsCategoryTreeItem,
+  PackagesCategoryTreeItem,
+} from './providers/DashboardProvider';
 import { registerCommands } from './commands';
-import { ConflictDiagnosticProvider } from './diagnostics';
+import { ConflictDiagnosticProvider, QuickFixProvider } from './diagnostics';
 import { DependencyResolver, VersionAnalyzer } from './core';
+import { PubspecInfo } from './types';
+import { DashboardPanel } from './webview';
 
 let dashboardProvider: DashboardProvider | undefined;
 let diagnosticProvider: ConflictDiagnosticProvider | undefined;
 let dashboardTreeView: vscode.TreeView<DashboardTreeItem> | undefined;
+
+// Track selected packages for contextual dashboard
+let selectedPackages: PubspecInfo[] | undefined;
+let selectionLabel: string | undefined;
+
+/**
+ * Extract packages from the tree view selection
+ * Returns both the packages and a label describing the selection
+ */
+function getPackagesFromSelection(
+  selection: readonly DashboardTreeItem[],
+  provider: DashboardProvider
+): { packages: PubspecInfo[]; label: string } | undefined {
+  if (selection.length === 0) {
+    return undefined;
+  }
+
+  const packages: PubspecInfo[] = [];
+  const allPackages = provider.getPackages();
+  const labels: string[] = [];
+
+  for (const item of selection) {
+    if (item instanceof PackageTreeItem) {
+      packages.push(item.pubspec);
+      labels.push(item.pubspec.name);
+    } else if (item instanceof FolderGroupTreeItem) {
+      // Add all packages in this folder (recursively)
+      const inFolder = allPackages.filter(
+        (pkg) =>
+          pkg.directory.startsWith(item.folderPath + path.sep) ||
+          pkg.directory === item.folderPath
+      );
+      packages.push(...inFolder);
+      labels.push(item.displayName);
+    } else if (item instanceof AppsCategoryTreeItem) {
+      packages.push(...item.apps);
+      labels.push('Apps');
+    } else if (item instanceof PackagesCategoryTreeItem) {
+      packages.push(...item.packages);
+      labels.push('Packages');
+    }
+  }
+
+  if (packages.length === 0) {
+    return undefined;
+  }
+
+  // Deduplicate packages by path
+  const uniquePackages = Array.from(
+    new Map(packages.map((p) => [p.path, p])).values()
+  );
+
+  return {
+    packages: uniquePackages,
+    label: labels.join(', '),
+  };
+}
 
 /**
  * Extension activation
@@ -24,6 +91,18 @@ export function activate(context: vscode.ExtensionContext): void {
   diagnosticProvider = new ConflictDiagnosticProvider();
   context.subscriptions.push(diagnosticProvider);
 
+  // Register Quick Fix provider for pubspec.yaml files
+  const quickFixProvider = new QuickFixProvider();
+  context.subscriptions.push(
+    vscode.languages.registerCodeActionsProvider(
+      { pattern: '**/pubspec.yaml' },
+      quickFixProvider,
+      {
+        providedCodeActionKinds: QuickFixProvider.providedCodeActionKinds,
+      }
+    )
+  );
+
   // Register tree view
   dashboardTreeView = vscode.window.createTreeView('pubspecMaster.dashboard', {
     treeDataProvider: dashboardProvider,
@@ -31,8 +110,26 @@ export function activate(context: vscode.ExtensionContext): void {
   });
   context.subscriptions.push(dashboardTreeView);
 
-  // Register commands (pass tree view for expand all)
-  registerCommands(context, dashboardProvider, dashboardTreeView);
+  // Listen for tree selection changes to update dashboard context
+  context.subscriptions.push(
+    dashboardTreeView.onDidChangeSelection((event) => {
+      const result = getPackagesFromSelection(event.selection, dashboardProvider!);
+      selectedPackages = result?.packages;
+      selectionLabel = result?.label;
+
+      // If dashboard is open, update it with filtered data
+      if (DashboardPanel.currentPanel) {
+        const packagesToShow = selectedPackages ?? dashboardProvider!.getPackages();
+        DashboardPanel.currentPanel.updateData(packagesToShow, selectionLabel);
+      }
+    })
+  );
+
+  // Register commands (pass tree view for expand all and selection getter)
+  registerCommands(context, dashboardProvider, dashboardTreeView, () => ({
+    packages: selectedPackages,
+    label: selectionLabel,
+  }));
 
   // Update diagnostics whenever the dashboard data changes
   dashboardProvider.onDidChangeTreeData(() => {
