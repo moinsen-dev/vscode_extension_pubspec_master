@@ -1,0 +1,25 @@
+name: api_client
+description: HTTP client for API communication.
+version: 1.0.0
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+resolution: workspace
+
+dependencies:
+  shared_models:
+    path: ../shared_models
+
+  # INTENTIONAL MAJOR CONFLICT: http ^0.13.0 (apps use ^1.x)
+  # This is a BREAKING version difference!
+  http: ^0.13.0
+
+  # JSON serialization
+  json_annotation: ^4.9.0
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^4.0.0
+  build_runner: ^2.4.0
+  json_serializable: ^6.8.0

@@ -1,0 +1,13 @@
+name: example_workspace
+description: Example monorepo for testing Moinsen Pubspec Master extension.
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+workspace:
+  - apps/shop_app
+  - apps/admin_app
+  - packages/core
+  - packages/ui_kit
+  - packages/api_client
+  - packages/shared_models

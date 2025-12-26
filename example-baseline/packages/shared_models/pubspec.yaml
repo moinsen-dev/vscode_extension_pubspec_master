@@ -1,0 +1,21 @@
+name: shared_models
+description: Shared data models and DTOs.
+version: 1.0.0
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+resolution: workspace
+
+dependencies:
+  # INTENTIONAL OUTDATED: json_annotation 4.7.0 is old (latest is 4.9.0)
+  json_annotation: ^4.7.0
+
+  # Utilities
+  equatable: ^2.0.5
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^4.0.0
+  build_runner: ^2.4.0
+  json_serializable: ^6.7.0

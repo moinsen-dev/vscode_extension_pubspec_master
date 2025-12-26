@@ -1,0 +1,31 @@
+name: admin_app
+description: Admin application - Flutter app for back-office management.
+version: 1.0.0
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+  flutter: '>=3.24.0'
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  core:
+    path: ../../packages/core
+  ui_kit:
+    path: ../../packages/ui_kit
+  api_client:
+    path: ../../packages/api_client
+
+  # INTENTIONAL CONFLICT: http ^1.2.0 (shop_app uses ^1.0.0)
+  http: ^1.2.0
+
+  # State management
+  provider: ^6.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0

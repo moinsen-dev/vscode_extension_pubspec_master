@@ -1,0 +1,23 @@
+{
+  "scan": {
+    "excludePatterns": ["**/build/**", "**/.dart_tool/**"],
+    "maxDepth": 5
+  },
+  "sync": {
+    "createBackup": true,
+    "backupLocation": ".pubspec-master-backup",
+    "ignoredPackages": [],
+    "ignoredDependencies": ["flutter", "flutter_test"]
+  },
+  "packageGroups": {
+    "apps": ["shop_app", "admin_app"],
+    "core": ["core", "shared_models"],
+    "features": ["ui_kit", "api_client"]
+  },
+  "versionRules": {
+    "http": {
+      "preferredVersion": "^1.2.0",
+      "excludeFromConflictCheck": false
+    }
+  }
+}
