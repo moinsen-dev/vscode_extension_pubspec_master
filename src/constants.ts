@@ -34,6 +34,7 @@ export const CONFIG = {
  * Default configuration values
  */
 export const DEFAULTS = {
+  /** Patterns to exclude when scanning for pubspec.yaml files */
   EXCLUDE_PATTERNS: [
     '**/build/**',
     '**/.dart_tool/**',
@@ -41,7 +42,18 @@ export const DEFAULTS = {
     '**/android/.gradle/**',
     '**/test/fixtures/**',
   ],
+  /** Maximum depth to scan for pubspec.yaml files */
   MAX_DEPTH: 10,
+  /** Debounce time for refresh operations */
   REFRESH_DEBOUNCE_MS: 500,
+  /** Timeout for pub commands in milliseconds */
   COMMAND_TIMEOUT_MS: 120000,
+  /** Directory name for storing backups */
+  BACKUP_LOCATION: '.pubspec-master-backup',
+  /** Maximum YAML alias count to prevent DoS attacks */
+  YAML_MAX_ALIAS_COUNT: 100,
+  /** Hours to keep cached data when offline */
+  OFFLINE_MAX_HOURS: 24,
+  /** Default cache TTL in minutes */
+  CACHE_TTL_MINUTES: 15,
 } as const;

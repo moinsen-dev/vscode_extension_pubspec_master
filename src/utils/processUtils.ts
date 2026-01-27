@@ -1,6 +1,7 @@
 import { execFile, spawn } from 'child_process';
 import { promisify } from 'util';
 import * as vscode from 'vscode';
+import { DEFAULTS } from '../constants';
 
 const execFileAsync = promisify(execFile);
 
@@ -55,7 +56,7 @@ export async function runPubGet(
   try {
     const { stdout, stderr } = await execFileAsync(command, [...args, 'get'], {
       cwd: packagePath,
-      timeout: 120000, // 2 minute timeout
+      timeout: DEFAULTS.COMMAND_TIMEOUT_MS,
     });
     return { stdout, stderr, exitCode: 0 };
   } catch (error: unknown) {
@@ -84,7 +85,7 @@ export async function runPubUpgrade(
   try {
     const { stdout, stderr } = await execFileAsync(command, [...args, 'upgrade'], {
       cwd: packagePath,
-      timeout: 120000, // 2 minute timeout
+      timeout: DEFAULTS.COMMAND_TIMEOUT_MS,
     });
     return { stdout, stderr, exitCode: 0 };
   } catch (error: unknown) {

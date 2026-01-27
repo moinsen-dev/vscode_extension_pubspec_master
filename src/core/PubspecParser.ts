@@ -6,6 +6,9 @@ import {
   PackageType,
   DependencyInfo,
 } from '../types';
+import { DEFAULTS } from '../constants';
+import { validatePubspec } from './PubspecValidator';
+import { wrapError } from '../utils/ErrorWithContext';
 
 /**
  * Parser for pubspec.yaml files
@@ -19,10 +22,17 @@ export class PubspecParser {
    *
    * @param filePath - Absolute path to the pubspec.yaml file
    * @returns Parsed pubspec information
-   * @throws Error if file cannot be read or parsed
+   * @throws ErrorWithContext if file cannot be read or parsed
    */
   async parse(filePath: string): Promise<PubspecInfo> {
-    const content = await fs.readFile(filePath, 'utf8');
+    let content: string;
+    try {
+      content = await fs.readFile(filePath, 'utf8');
+    } catch (error) {
+      throw wrapError(error, 'reading pubspec.yaml', filePath, {
+        suggestion: 'Ensure the file exists and is readable',
+      });
+    }
     return this.parseContent(content, filePath);
   }
 
@@ -36,21 +46,33 @@ export class PubspecParser {
    */
   parseContent(content: string, filePath: string): PubspecInfo {
     // Parse YAML with safe settings
-    const parsed = YAML.parse(content, {
-      strict: true,
-      maxAliasCount: 100,
-    }) as Record<string, unknown> | null;
+    let parsed: Record<string, unknown> | null;
+    try {
+      parsed = YAML.parse(content, {
+        strict: true,
+        maxAliasCount: DEFAULTS.YAML_MAX_ALIAS_COUNT,
+      }) as Record<string, unknown> | null;
+    } catch (yamlError) {
+      throw wrapError(yamlError, 'parsing YAML', filePath, {
+        suggestion: 'Check the YAML syntax for errors',
+      });
+    }
 
     // Handle empty file
     if (!parsed) {
       throw new Error(`Empty or invalid pubspec.yaml at ${filePath}`);
     }
 
-    // Validate required name field
-    const name = parsed.name;
-    if (!name || typeof name !== 'string') {
-      throw new Error(`Missing or invalid 'name' field in ${filePath}`);
+    // Validate the pubspec structure
+    const validation = validatePubspec(parsed, filePath);
+    if (!validation.valid) {
+      // Throw the first error with a helpful message
+      const firstError = validation.errors[0];
+      throw firstError;
     }
+
+    // Extract name (already validated)
+    const name = parsed.name as string;
 
     const type = this.detectPackageType(parsed);
     const dependencies = this.extractDependencies(parsed.dependencies);

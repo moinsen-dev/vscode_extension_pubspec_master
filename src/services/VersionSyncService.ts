@@ -5,6 +5,7 @@ import * as vscode from 'vscode';
 import { PubspecInfo } from '../types';
 import { VersionConflict, SdkMismatch } from '../core/VersionAnalyzer';
 import { runFlutterAnalyze, getOutputChannel } from '../utils/processUtils';
+import { DEFAULTS } from '../constants';
 
 /**
  * Result of a sync operation
@@ -63,7 +64,7 @@ export class VersionSyncService {
   ): Promise<SyncResult> {
     const {
       createBackup = true,
-      backupLocation = '.pubspec-master-backup',
+      backupLocation = DEFAULTS.BACKUP_LOCATION,
     } = this.getOptionsWithDefaults(options);
 
     if (!conflict.suggestedResolution) {
@@ -170,7 +171,7 @@ export class VersionSyncService {
   ): Promise<SyncResult> {
     const {
       createBackup = true,
-      backupLocation = '.pubspec-master-backup',
+      backupLocation = DEFAULTS.BACKUP_LOCATION,
     } = this.getOptionsWithDefaults(options);
 
     // Collect all files that need to be updated
@@ -260,7 +261,7 @@ export class VersionSyncService {
   ): Promise<SyncResult> {
     const {
       createBackup = true,
-      backupLocation = '.pubspec-master-backup',
+      backupLocation = DEFAULTS.BACKUP_LOCATION,
     } = this.getOptionsWithDefaults(options);
 
     // Filter to conflicts that have resolutions
@@ -443,7 +444,7 @@ export class VersionSyncService {
 
     return {
       createBackup: options.createBackup ?? config.get('sync.createBackup', true),
-      backupLocation: options.backupLocation ?? config.get('sync.backupLocation', '.pubspec-master-backup'),
+      backupLocation: options.backupLocation ?? config.get('sync.backupLocation', DEFAULTS.BACKUP_LOCATION),
       showConfirmation: options.showConfirmation ?? true,
     };
   }
@@ -574,7 +575,7 @@ export class VersionSyncService {
   ): Promise<SyncResult> {
     const {
       createBackup = true,
-      backupLocation = '.pubspec-master-backup',
+      backupLocation = DEFAULTS.BACKUP_LOCATION,
     } = this.getOptionsWithDefaults(options);
 
     // Find all packages that use this dependency

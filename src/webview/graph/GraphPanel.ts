@@ -111,6 +111,7 @@ export class GraphPanel implements vscode.Disposable {
     svgData?: string;
     pngData?: string;
     filename?: string;
+    error?: string;
   }): Promise<void> {
     switch (message.command) {
       case 'openPubspec':
@@ -144,6 +145,10 @@ export class GraphPanel implements vscode.Disposable {
         if (message.pngData) {
           await this.handleExportPng(message.pngData);
         }
+        break;
+
+      case 'exportError':
+        vscode.window.showErrorMessage(`PNG Export failed: ${message.error || 'Unknown error'}`);
         break;
     }
   }
@@ -559,6 +564,11 @@ export class GraphPanel implements vscode.Disposable {
 
       // Create nodes
       const nodeElements = [];
+
+      // Drag state (shared across all nodes)
+      let draggedNode = null;
+      let draggedNodeData = null;
+
       data.nodes.forEach(function(node) {
         const nodeData = nodeMap.get(node.id);
         const nodeClass = node.type === 'external' ? 'external' : (node.packageType || 'dart-package').replace('_', '-');
@@ -590,21 +600,44 @@ export class GraphPanel implements vscode.Disposable {
           hideTooltip();
         });
 
-        // Drag handling
-        let isDragging = false;
+        // Drag handling - mousedown starts drag
         nodeG.addEventListener('mousedown', function(e) {
-          isDragging = true;
+          draggedNode = node;
+          draggedNodeData = nodeData;
+          nodeG.style.cursor = 'grabbing';
           e.preventDefault();
+          e.stopPropagation();
         });
 
         nodesGroup.appendChild(nodeG);
         nodeElements.push({ element: nodeG, node: nodeData, id: node.id });
       });
 
-      // Simple force simulation
+      // Simple force simulation velocities
       let velocities = new Map();
       data.nodes.forEach(function(n) {
         velocities.set(n.id, { vx: 0, vy: 0 });
+      });
+
+      // Document-level mouse handlers for drag
+      document.addEventListener('mousemove', function(e) {
+        if (!draggedNode || !draggedNodeData) return;
+        const rect = svg.getBoundingClientRect();
+        draggedNodeData.x = e.clientX - rect.left;
+        draggedNodeData.y = e.clientY - rect.top;
+        // Reset velocity when dragging
+        velocities.set(draggedNode.id, { vx: 0, vy: 0 });
+      });
+
+      document.addEventListener('mouseup', function() {
+        if (draggedNode) {
+          const nodeEl = nodeElements.find(function(n) { return n.id === draggedNode.id; });
+          if (nodeEl) {
+            nodeEl.element.style.cursor = '';
+          }
+        }
+        draggedNode = null;
+        draggedNodeData = null;
       });
 
       function tick() {
@@ -801,7 +834,22 @@ export class GraphPanel implements vscode.Disposable {
 
       // Create canvas and render SVG
       const img = new Image();
+      let exportCompleted = false;
+
+      // Timeout to prevent hanging indefinitely
+      const exportTimeout = setTimeout(function() {
+        if (!exportCompleted) {
+          exportCompleted = true;
+          URL.revokeObjectURL(url);
+          vscode.postMessage({ command: 'exportError', error: 'PNG export timed out' });
+        }
+      }, 10000); // 10 second timeout
+
       img.onload = function() {
+        if (exportCompleted) return;
+        exportCompleted = true;
+        clearTimeout(exportTimeout);
+
         const canvas = document.createElement('canvas');
         canvas.width = width * 2; // 2x for higher resolution
         canvas.height = height * 2;
@@ -815,6 +863,15 @@ export class GraphPanel implements vscode.Disposable {
         const pngData = canvas.toDataURL('image/png');
         vscode.postMessage({ command: 'exportPng', pngData: pngData });
       };
+
+      img.onerror = function() {
+        if (exportCompleted) return;
+        exportCompleted = true;
+        clearTimeout(exportTimeout);
+        URL.revokeObjectURL(url);
+        vscode.postMessage({ command: 'exportError', error: 'Failed to load SVG for PNG export' });
+      };
+
       img.src = url;
     }
 

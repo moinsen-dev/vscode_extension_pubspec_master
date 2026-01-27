@@ -150,7 +150,7 @@ export function activate(context: vscode.ExtensionContext): void {
 /**
  * Update diagnostics based on current workspace state
  */
-function updateDiagnostics(): void {
+async function updateDiagnostics(): Promise<void> {
   if (!dashboardProvider || !diagnosticProvider) {return;}
 
   const packages = dashboardProvider.getPackages();
@@ -166,7 +166,7 @@ function updateDiagnostics(): void {
   const analysis = analyzer.analyze(packages, graph);
 
   // Update diagnostics
-  diagnosticProvider.updateDiagnostics(packages, analysis);
+  await diagnosticProvider.updateDiagnostics(packages, analysis);
 }
 
 /**

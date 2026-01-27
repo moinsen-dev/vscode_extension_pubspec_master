@@ -13,3 +13,5 @@ export type {
   OutdatedPackage,
   WorkspaceAnalysis,
 } from './VersionAnalyzer';
+export { validatePubspec, PubspecValidationError } from './PubspecValidator';
+export type { ValidationResult } from './PubspecValidator';

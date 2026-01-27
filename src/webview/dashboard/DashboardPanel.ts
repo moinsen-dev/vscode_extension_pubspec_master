@@ -1890,7 +1890,7 @@ export class DashboardPanel implements vscode.Disposable {
 
       const comingSoon = document.createElement('span');
       comingSoon.className = 'coming-soon';
-      comingSoon.textContent = '(Coming Q1 2026)';
+      comingSoon.textContent = '(Coming soon)';
       promoDiv.appendChild(comingSoon);
 
       healthList.appendChild(promoDiv);

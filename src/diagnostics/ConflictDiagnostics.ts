@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
+import * as fs from 'fs/promises';
 import { PubspecInfo, PackageHealthIssue } from '../types';
 import { VersionConflict, SdkMismatch, WorkspaceAnalysis } from '../core/VersionAnalyzer';
 
@@ -19,10 +19,10 @@ export class ConflictDiagnosticProvider implements vscode.Disposable {
   /**
    * Update diagnostics based on the current workspace analysis
    */
-  updateDiagnostics(
+  async updateDiagnostics(
     packages: PubspecInfo[],
     analysis: WorkspaceAnalysis
-  ): void {
+  ): Promise<void> {
     // Clear existing diagnostics
     this.diagnosticCollection.clear();
 
@@ -31,17 +31,17 @@ export class ConflictDiagnosticProvider implements vscode.Disposable {
 
     // Process version conflicts
     for (const conflict of analysis.conflicts) {
-      this.addConflictDiagnostics(conflict, packages, diagnosticsMap);
+      await this.addConflictDiagnostics(conflict, packages, diagnosticsMap);
     }
 
     // Process SDK mismatches
     for (const mismatch of analysis.sdkMismatches) {
-      this.addSdkMismatchDiagnostics(mismatch, packages, diagnosticsMap);
+      await this.addSdkMismatchDiagnostics(mismatch, packages, diagnosticsMap);
     }
 
     // Process package health issues
     for (const healthIssue of analysis.healthIssues) {
-      this.addHealthDiagnostics(healthIssue, packages, diagnosticsMap);
+      await this.addHealthDiagnostics(healthIssue, packages, diagnosticsMap);
     }
 
     // Set all diagnostics
@@ -53,16 +53,16 @@ export class ConflictDiagnosticProvider implements vscode.Disposable {
   /**
    * Add diagnostics for a version conflict
    */
-  private addConflictDiagnostics(
+  private async addConflictDiagnostics(
     conflict: VersionConflict,
     packages: PubspecInfo[],
     diagnosticsMap: Map<string, vscode.Diagnostic[]>
-  ): void {
+  ): Promise<void> {
     for (const pkg of conflict.packages) {
       const pubspec = packages.find(p => p.name === pkg.packageName);
       if (!pubspec) {continue;}
 
-      const location = this.findDependencyLocation(
+      const location = await this.findDependencyLocation(
         pubspec.path,
         conflict.dependencyName,
         pkg.isDev
@@ -119,16 +119,16 @@ export class ConflictDiagnosticProvider implements vscode.Disposable {
   /**
    * Add diagnostics for an SDK mismatch
    */
-  private addSdkMismatchDiagnostics(
+  private async addSdkMismatchDiagnostics(
     mismatch: SdkMismatch,
     packages: PubspecInfo[],
     diagnosticsMap: Map<string, vscode.Diagnostic[]>
-  ): void {
+  ): Promise<void> {
     for (const pkg of mismatch.packages) {
       const pubspec = packages.find(p => p.name === pkg.packageName);
       if (!pubspec) {continue;}
 
-      const location = this.findSdkLocation(pubspec.path);
+      const location = await this.findSdkLocation(pubspec.path);
       if (!location) {continue;}
 
       const severity = this.mapSeverity(mismatch.severity);
@@ -175,13 +175,13 @@ export class ConflictDiagnosticProvider implements vscode.Disposable {
   /**
    * Find the line and column of a dependency in a pubspec.yaml file
    */
-  private findDependencyLocation(
+  private async findDependencyLocation(
     filePath: string,
     dependencyName: string,
     isDev: boolean
-  ): { line: number; startCol: number; endCol: number } | null {
+  ): Promise<{ line: number; startCol: number; endCol: number } | null> {
     try {
-      const content = fs.readFileSync(filePath, 'utf-8');
+      const content = await fs.readFile(filePath, 'utf-8');
       const lines = content.split('\n');
 
       const sectionName = isDev ? 'dev_dependencies' : 'dependencies';
@@ -230,11 +230,11 @@ export class ConflictDiagnosticProvider implements vscode.Disposable {
   /**
    * Find the line and column of the SDK constraint in a pubspec.yaml file
    */
-  private findSdkLocation(
+  private async findSdkLocation(
     filePath: string
-  ): { line: number; startCol: number; endCol: number } | null {
+  ): Promise<{ line: number; startCol: number; endCol: number } | null> {
     try {
-      const content = fs.readFileSync(filePath, 'utf-8');
+      const content = await fs.readFile(filePath, 'utf-8');
       const lines = content.split('\n');
 
       let inEnvironment = false;
@@ -278,11 +278,11 @@ export class ConflictDiagnosticProvider implements vscode.Disposable {
   /**
    * Add diagnostics for a package health issue
    */
-  private addHealthDiagnostics(
+  private async addHealthDiagnostics(
     healthIssue: PackageHealthIssue,
     packages: PubspecInfo[],
     diagnosticsMap: Map<string, vscode.Diagnostic[]>
-  ): void {
+  ): Promise<void> {
     // Add diagnostic to each package that uses this dependency
     for (const packageName of healthIssue.usedBy) {
       const pubspec = packages.find(p => p.name === packageName);
@@ -290,7 +290,7 @@ export class ConflictDiagnosticProvider implements vscode.Disposable {
 
       // Check if it's a dev dependency or regular dependency
       const isDev = pubspec.devDependencies.has(healthIssue.packageName);
-      const location = this.findDependencyLocation(
+      const location = await this.findDependencyLocation(
         pubspec.path,
         healthIssue.packageName,
         isDev

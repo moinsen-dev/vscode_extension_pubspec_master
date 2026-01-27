@@ -3,6 +3,7 @@ import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
 import { MigrationPlan, MigrationResult, FileChange } from './types';
 import { runCommand, getOutputChannel } from '../utils/processUtils';
+import { DEFAULTS } from '../constants';
 
 /**
  * Executes migration plans
@@ -120,7 +121,7 @@ export class MigrationExecutor {
    */
   private async createBackup(changes: FileChange[]): Promise<string> {
     const config = vscode.workspace.getConfiguration('pubspecMaster');
-    const backupLocation = config.get('sync.backupLocation', '.pubspec-master-backup');
+    const backupLocation = config.get('sync.backupLocation', DEFAULTS.BACKUP_LOCATION);
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupDir = path.join(this.workspaceRoot, backupLocation, `migration-${timestamp}`);

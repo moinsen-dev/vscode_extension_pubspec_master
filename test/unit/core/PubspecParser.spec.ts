@@ -258,7 +258,7 @@ environment:
   sdk: ^3.0.0
 `;
       expect(() => parser.parseContent(content, '/test/pubspec.yaml')).to.throw(
-        /Missing or invalid 'name' field/
+        /Missing required field: name/
       );
     });
 
@@ -372,7 +372,7 @@ dependencies:
         await parser.parse(filePath);
         expect.fail('Should have thrown an error');
       } catch (error) {
-        expect((error as Error).message).to.include('Missing or invalid');
+        expect((error as Error).message).to.include('Missing required field: name');
       }
     });
   });

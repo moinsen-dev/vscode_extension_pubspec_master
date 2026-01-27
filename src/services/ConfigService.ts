@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { DEFAULTS } from '../constants';
 
 /**
  * Configuration options for the extension
@@ -122,7 +123,7 @@ export class ConfigService {
       },
       sync: {
         createBackup: true,
-        backupLocation: '.pubspec-master-backup',
+        backupLocation: DEFAULTS.BACKUP_LOCATION,
         ignoredPackages: [],
         ignoredDependencies: [],
       },

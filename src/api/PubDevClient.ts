@@ -1,5 +1,6 @@
 import * as https from 'https';
 import * as vscode from 'vscode';
+import { DEFAULTS } from '../constants';
 
 /**
  * Package info from pub.dev API
@@ -56,12 +57,13 @@ export class PubDevClient {
   private readonly defaultTtl: number;
   private readonly offlineMaxAge: number;
   private isOnline = true;
+  private offlineNotificationShown = false;
 
   constructor(context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration('pubspecMaster.cache');
-    this.defaultTtl = (config.get<number>('ttlMinutes', 15) || 15) * 60 * 1000;
+    this.defaultTtl = (config.get<number>('ttlMinutes', DEFAULTS.CACHE_TTL_MINUTES) || DEFAULTS.CACHE_TTL_MINUTES) * 60 * 1000;
     this.offlineMaxAge =
-      (config.get<number>('offlineMaxHours', 24) || 24) * 60 * 60 * 1000;
+      (config.get<number>('offlineMaxHours', DEFAULTS.OFFLINE_MAX_HOURS) || DEFAULTS.OFFLINE_MAX_HOURS) * 60 * 60 * 1000;
 
     // Restore cache from global state
     const savedCache = context.globalState.get<
@@ -131,6 +133,7 @@ export class PubDevClient {
         };
         this.setCache(cacheKey, info);
         this.isOnline = true;
+        this.offlineNotificationShown = false; // Reset when back online
 
         // Fetch additional metrics (score, likes, popularity) from score endpoint
         this.fetchPackageMetrics(packageName, info);
@@ -138,7 +141,18 @@ export class PubDevClient {
         return info;
       }
     } catch (error) {
+      const wasOnline = this.isOnline;
       this.isOnline = false;
+
+      // Show notification once when going offline
+      if (wasOnline && !this.offlineNotificationShown) {
+        this.offlineNotificationShown = true;
+        vscode.window.showWarningMessage(
+          'Pubspec Master: Unable to reach pub.dev. Using cached data (may be outdated).',
+          'OK'
+        );
+      }
+
       // Try to return stale cache in offline mode
       const stale = this.getFromCache<PubPackageInfo>(cacheKey, true);
       if (stale) {
