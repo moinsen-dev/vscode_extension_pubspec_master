@@ -1,7 +1,17 @@
 /**
  * Type of Dart/Flutter package detected from pubspec.yaml content
+ *
+ * Priority order for detection:
+ * 1. flutter_plugin - has flutter.plugin section
+ * 2. flutter_app - has flutter dep + (publish_to: none OR uses-material-design)
+ * 3. flutter_package - has flutter dep (but not app/plugin)
+ * 4. dart_package - no flutter dependency
  */
-export type PackageType = 'flutter_app' | 'dart_package' | 'flutter_plugin';
+export type PackageType =
+  | 'flutter_app'
+  | 'flutter_package'
+  | 'flutter_plugin'
+  | 'dart_package';
 
 /**
  * Resolution mode for workspace packages

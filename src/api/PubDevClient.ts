@@ -3,6 +3,22 @@ import * as vscode from 'vscode';
 import { DEFAULTS } from '../constants';
 
 /**
+ * SDK constraints for a specific package version
+ */
+export interface VersionSdkConstraints {
+  /** Package name */
+  name: string;
+  /** Package version */
+  version: string;
+  /** Dart SDK constraint (e.g., ">=3.4.0 <4.0.0") */
+  sdkConstraint?: string;
+  /** Flutter SDK constraint if applicable */
+  flutterConstraint?: string;
+  /** When this version was published */
+  published?: string;
+}
+
+/**
  * Package info from pub.dev API
  */
 export interface PubPackageInfo {
@@ -58,6 +74,7 @@ export class PubDevClient {
   private readonly offlineMaxAge: number;
   private isOnline = true;
   private offlineNotificationShown = false;
+  private lastSuccessfulSyncTime = Date.now();
 
   constructor(context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration('pubspecMaster.cache');
@@ -133,6 +150,7 @@ export class PubDevClient {
         };
         this.setCache(cacheKey, info);
         this.isOnline = true;
+        this.lastSuccessfulSyncTime = Date.now();
         this.offlineNotificationShown = false; // Reset when back online
 
         // Fetch additional metrics (score, likes, popularity) from score endpoint
@@ -233,6 +251,95 @@ export class PubDevClient {
     );
 
     return results;
+  }
+
+  /**
+   * Get SDK constraints for a specific package version
+   *
+   * @param packageName - Package name on pub.dev
+   * @param version - Specific version to check (e.g., "2.0.0")
+   * @returns SDK constraints for that version, or null if not found
+   */
+  async getVersionSdkConstraints(
+    packageName: string,
+    version: string
+  ): Promise<VersionSdkConstraints | null> {
+    const cacheKey = `version:${packageName}:${version}`;
+    const cached = this.getFromCache<VersionSdkConstraints>(cacheKey);
+
+    if (cached) {
+      return cached;
+    }
+
+    try {
+      const response = await this.fetch<{
+        version: string;
+        published?: string;
+        pubspec: {
+          name: string;
+          version: string;
+          environment?: {
+            sdk?: string;
+            flutter?: string;
+          };
+        };
+      }>(`/packages/${packageName}/versions/${version}`);
+
+      if (response) {
+        const constraints: VersionSdkConstraints = {
+          name: packageName,
+          version: response.version,
+          sdkConstraint: response.pubspec.environment?.sdk,
+          flutterConstraint: response.pubspec.environment?.flutter,
+          published: response.published,
+        };
+
+        // Cache with longer TTL since version constraints don't change
+        this.setCache(cacheKey, constraints, 24 * 60 * 60 * 1000); // 24 hours
+
+        return constraints;
+      }
+    } catch {
+      // Try stale cache
+      return this.getFromCache<VersionSdkConstraints>(cacheKey, true);
+    }
+
+    return null;
+  }
+
+  /**
+   * Find the highest version compatible with the given SDK version
+   *
+   * @param packageName - Package name on pub.dev
+   * @param installedSdkVersion - User's installed SDK version (e.g., "3.4.0")
+   * @returns The highest compatible version, or null if none found
+   */
+  async findHighestCompatibleVersion(
+    packageName: string,
+    installedSdkVersion: string
+  ): Promise<string | null> {
+    const info = await this.getPackageInfo(packageName);
+    if (!info) {
+      return null;
+    }
+
+    // Import dynamically to avoid circular dependency
+    const { SdkVersionService } = await import('../core/SdkVersionService');
+
+    // Check versions from newest to oldest
+    for (const version of info.versions) {
+      const constraints = await this.getVersionSdkConstraints(packageName, version);
+      if (constraints?.sdkConstraint) {
+        if (SdkVersionService.isConstraintSatisfied(constraints.sdkConstraint, installedSdkVersion)) {
+          return version;
+        }
+      } else {
+        // No SDK constraint means any SDK version works
+        return version;
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -370,6 +477,13 @@ export class PubDevClient {
    */
   getOnlineStatus(): boolean {
     return this.isOnline;
+  }
+
+  /**
+   * Get the timestamp of the last successful API sync
+   */
+  getLastSyncTime(): number {
+    return this.lastSuccessfulSyncTime;
   }
 
   /**

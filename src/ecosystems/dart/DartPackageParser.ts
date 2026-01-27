@@ -104,6 +104,9 @@ export class DartPackageParser implements IPackageParser {
       case 'flutter_plugin':
         packageType = 'flutter_plugin';
         break;
+      case 'flutter_package':
+        packageType = 'flutter_package';
+        break;
       case 'dart_package':
       default:
         packageType = 'dart_package';

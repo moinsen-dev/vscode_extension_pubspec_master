@@ -67,6 +67,7 @@ export class GitHubClient {
   private token?: string;
   private rateLimitRemaining = 60;
   private rateLimitReset = 0;
+  private rateLimitNotificationShown = false;
 
   constructor(context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration('pubspecMaster.github');
@@ -135,6 +136,7 @@ export class GitHubClient {
     // Check rate limit
     if (this.rateLimitRemaining <= 1 && Date.now() < this.rateLimitReset) {
       console.warn('Moinsen: GitHub API rate limit reached, using cached data');
+      this.showRateLimitNotification();
       return this.getFromCache<GitHubMetrics>(cacheKey, true);
     }
 
@@ -290,6 +292,7 @@ export class GitHubClient {
             }
           } else if (res.statusCode === 403 && this.rateLimitRemaining === 0) {
             console.warn('Moinsen: GitHub API rate limited');
+            this.showRateLimitNotification();
             resolve(null);
           } else if (res.statusCode === 404) {
             // Repository not found or private
@@ -355,6 +358,27 @@ export class GitHubClient {
    */
   getRateLimitRemaining(): number {
     return this.rateLimitRemaining;
+  }
+
+  /**
+   * Show rate limit notification to user (once per session)
+   */
+  private showRateLimitNotification(): void {
+    if (this.rateLimitNotificationShown) {
+      return;
+    }
+    this.rateLimitNotificationShown = true;
+
+    const resetTime = new Date(this.rateLimitReset);
+    const message = this.token
+      ? `Pubspec Master: GitHub API rate limit reached. Resets at ${resetTime.toLocaleTimeString()}.`
+      : `Pubspec Master: GitHub API rate limit reached. Configure a GitHub token for higher limits.`;
+
+    vscode.window.showWarningMessage(message, 'Configure Token', 'OK').then((choice) => {
+      if (choice === 'Configure Token') {
+        vscode.commands.executeCommand('workbench.action.openSettings', 'pubspecMaster.github.token');
+      }
+    });
   }
 
   /**

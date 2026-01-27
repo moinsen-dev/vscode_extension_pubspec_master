@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
 import { PubspecInfo, PackageHealthIssue } from '../types';
 import { VersionConflict, SdkMismatch, WorkspaceAnalysis } from '../core/VersionAnalyzer';
+import { CompatibilityCheckResult } from '../core/CompatibilityAnalyzer';
 
 /**
  * Manages diagnostics for version conflicts and SDK mismatches
@@ -42,6 +43,13 @@ export class ConflictDiagnosticProvider implements vscode.Disposable {
     // Process package health issues
     for (const healthIssue of analysis.healthIssues) {
       await this.addHealthDiagnostics(healthIssue, packages, diagnosticsMap);
+    }
+
+    // Process SDK compatibility issues (if provided)
+    if (analysis.compatibilityIssues) {
+      for (const compatIssue of analysis.compatibilityIssues) {
+        await this.addCompatibilityDiagnostics(compatIssue, packages, diagnosticsMap);
+      }
     }
 
     // Set all diagnostics
@@ -343,6 +351,87 @@ export class ConflictDiagnosticProvider implements vscode.Disposable {
         }
         (diagnostic as unknown as { ageText: string }).ageText = ageText;
       }
+
+      if (!diagnosticsMap.has(pubspec.path)) {
+        diagnosticsMap.set(pubspec.path, []);
+      }
+      diagnosticsMap.get(pubspec.path)!.push(diagnostic);
+    }
+  }
+
+  /**
+   * Add diagnostics for SDK compatibility issues
+   *
+   * Shows warnings when a package update requires a newer SDK than installed
+   */
+  private async addCompatibilityDiagnostics(
+    compatIssue: CompatibilityCheckResult,
+    packages: PubspecInfo[],
+    diagnosticsMap: Map<string, vscode.Diagnostic[]>
+  ): Promise<void> {
+    // Only show diagnostic if latest is incompatible
+    if (compatIssue.isLatestCompatible || !compatIssue.latestVersion) {
+      return;
+    }
+
+    // Find packages that use this dependency
+    for (const pubspec of packages) {
+      const isDev = pubspec.devDependencies.has(compatIssue.packageName);
+      const hasDep = pubspec.dependencies.has(compatIssue.packageName) || isDev;
+
+      if (!hasDep) {
+        continue;
+      }
+
+      const location = await this.findDependencyLocation(
+        pubspec.path,
+        compatIssue.packageName,
+        isDev
+      );
+
+      if (!location) {
+        continue;
+      }
+
+      // Build message based on whether there's a compatible alternative
+      let message: string;
+      let severity: vscode.DiagnosticSeverity;
+
+      if (compatIssue.highestCompatibleVersion &&
+          compatIssue.highestCompatibleVersion !== compatIssue.currentVersion) {
+        // There's a compatible update available
+        message = `Update available: ${compatIssue.currentVersion} → ${compatIssue.highestCompatibleVersion} ` +
+          `(latest ${compatIssue.latestVersion} requires SDK ${compatIssue.latestSdkConstraint || 'newer'}, ` +
+          `you have ${compatIssue.installedDartSdk})`;
+        severity = vscode.DiagnosticSeverity.Information;
+      } else if (compatIssue.highestCompatibleVersion === compatIssue.currentVersion) {
+        // Already at highest compatible version
+        message = `At highest compatible version. Latest ${compatIssue.latestVersion} requires ` +
+          `SDK ${compatIssue.latestSdkConstraint || 'newer'} (you have ${compatIssue.installedDartSdk})`;
+        severity = vscode.DiagnosticSeverity.Hint;
+      } else {
+        // No compatible version found
+        message = `Latest ${compatIssue.latestVersion} requires SDK ${compatIssue.latestSdkConstraint || 'newer'} ` +
+          `(you have ${compatIssue.installedDartSdk})`;
+        severity = vscode.DiagnosticSeverity.Warning;
+      }
+
+      const diagnostic = new vscode.Diagnostic(
+        new vscode.Range(
+          location.line,
+          location.startCol,
+          location.line,
+          location.endCol
+        ),
+        message,
+        severity
+      );
+
+      diagnostic.code = 'pubspecMaster.sdkCompatibility';
+      diagnostic.source = 'Moinsen Pubspec Master';
+
+      // Store compatibility info for quick fix
+      (diagnostic as unknown as { compatibilityInfo: CompatibilityCheckResult }).compatibilityInfo = compatIssue;
 
       if (!diagnosticsMap.has(pubspec.path)) {
         diagnosticsMap.set(pubspec.path, []);

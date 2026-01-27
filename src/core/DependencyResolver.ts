@@ -1,4 +1,4 @@
-import { PubspecInfo, DependencyInfo } from '../types';
+import { PubspecInfo, DependencyInfo, PackageType } from '../types';
 
 /**
  * Node in the dependency graph
@@ -7,7 +7,7 @@ export interface DependencyNode {
   name: string;
   version?: string;
   type: 'internal' | 'external';
-  packageType?: 'flutter_app' | 'dart_package' | 'flutter_plugin';
+  packageType?: PackageType;
   dependencies: string[];
   dependents: string[];
   source: 'pub.dev' | 'path' | 'git' | 'sdk';

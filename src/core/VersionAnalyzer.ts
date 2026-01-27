@@ -2,6 +2,7 @@ import { PubspecInfo, PackageHealthIssue, GitHubHealthMetrics } from '../types';
 import { DependencyGraph } from './DependencyResolver';
 import { PubPackageInfo } from '../api/PubDevClient';
 import { GitHubMetrics } from '../api/GitHubClient';
+import { CompatibilityCheckResult } from './CompatibilityAnalyzer';
 
 /**
  * Version conflict information
@@ -49,6 +50,8 @@ export interface WorkspaceAnalysis {
   sdkMismatches: SdkMismatch[];
   outdatedPackages: OutdatedPackage[];
   healthIssues: PackageHealthIssue[];
+  /** SDK compatibility issues for package updates (optional, requires network) */
+  compatibilityIssues?: CompatibilityCheckResult[];
   healthScore: number;
   summary: {
     totalPackages: number;
@@ -56,6 +59,8 @@ export interface WorkspaceAnalysis {
     totalConflicts: number;
     totalOutdated: number;
     totalHealthIssues: number;
+    /** Number of packages with SDK-incompatible updates */
+    totalIncompatibleUpdates?: number;
   };
 }
 

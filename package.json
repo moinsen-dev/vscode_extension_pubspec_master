@@ -2,7 +2,7 @@
   "name": "pubspec-master",
   "displayName": "Moinsen Pubspec Master",
   "description": "Flutter/Dart monorepo management by Moinsen - Dashboard, dependency graph, migration tools, and private package support",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "publisher": "moinsen",
   "license": "MIT",
   "repository": {

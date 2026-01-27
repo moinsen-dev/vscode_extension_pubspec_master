@@ -719,7 +719,8 @@ export class GraphPanel implements vscode.Disposable {
       title.textContent = node.id;
       var typeText = node.type === 'external' ? 'External Package' :
         (node.packageType === 'flutter_app' ? 'Flutter App' :
-         node.packageType === 'flutter_plugin' ? 'Flutter Plugin' : 'Dart Package');
+         node.packageType === 'flutter_plugin' ? 'Flutter Plugin' :
+         node.packageType === 'flutter_package' ? 'Flutter Package' : 'Dart Package');
       detail.textContent = typeText + ' \\u2022 ' + node.dependencyCount + ' deps \\u2022 ' + node.dependentCount + ' dependents';
 
       tooltip.style.left = (x + 10) + 'px';

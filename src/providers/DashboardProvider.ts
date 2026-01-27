@@ -141,6 +141,8 @@ export class PackageTreeItem extends DashboardTreeItem {
         return 'Flutter App';
       case 'flutter_plugin':
         return 'Plugin';
+      case 'flutter_package':
+        return 'Flutter Package';
       case 'dart_package':
         return 'Package';
     }
@@ -181,6 +183,8 @@ export class PackageTreeItem extends DashboardTreeItem {
         return new vscode.ThemeIcon('device-mobile', new vscode.ThemeColor('charts.blue'));
       case 'flutter_plugin':
         return new vscode.ThemeIcon('plug', new vscode.ThemeColor('charts.purple'));
+      case 'flutter_package':
+        return new vscode.ThemeIcon('package', new vscode.ThemeColor('charts.orange'));
       case 'dart_package':
         return new vscode.ThemeIcon('package', new vscode.ThemeColor('charts.green'));
     }

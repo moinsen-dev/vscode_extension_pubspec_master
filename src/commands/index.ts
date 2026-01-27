@@ -121,7 +121,7 @@ export function registerCommands(
         }
 
         const pkg: PubspecInfo = item.pubspec;
-        const isFlutter = pkg.type === 'flutter_app' || pkg.type === 'flutter_plugin';
+        const isFlutter = pkg.type === 'flutter_app' || pkg.type === 'flutter_plugin' || pkg.type === 'flutter_package';
 
         await vscode.window.withProgress(
           {
@@ -156,7 +156,7 @@ export function registerCommands(
         }
 
         const pkg: PubspecInfo = item.pubspec;
-        const isFlutter = pkg.type === 'flutter_app' || pkg.type === 'flutter_plugin';
+        const isFlutter = pkg.type === 'flutter_app' || pkg.type === 'flutter_plugin' || pkg.type === 'flutter_package';
 
         await vscode.window.withProgress(
           {

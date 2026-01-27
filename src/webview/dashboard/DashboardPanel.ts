@@ -5,6 +5,8 @@ import {
   DependencyGraph,
   VersionAnalyzer,
   WorkspaceAnalysis,
+  RecommendationEngine,
+  RecommendationReport,
 } from '../../core';
 import { PubDevClient, PubPackageInfo, GitHubClient, GitHubMetrics } from '../../api';
 import { VersionSyncService } from '../../services';
@@ -25,6 +27,7 @@ export class DashboardPanel implements vscode.Disposable {
   private readonly pubDevClient: PubDevClient;
   private readonly githubClient: GitHubClient;
   private readonly versionSyncService: VersionSyncService;
+  private readonly recommendationEngine: RecommendationEngine;
   private disposables: vscode.Disposable[] = [];
 
   private packages: PubspecInfo[] = [];
@@ -39,6 +42,8 @@ export class DashboardPanel implements vscode.Disposable {
   }> = [];
   private isCheckingUpdates = false;
   private selectionContext?: string;  // Label describing what's selected in tree view
+  private recommendations?: RecommendationReport;
+  private isGeneratingRecommendations = false;
 
   private constructor(
     panel: vscode.WebviewPanel,
@@ -50,6 +55,7 @@ export class DashboardPanel implements vscode.Disposable {
     this.versionAnalyzer = new VersionAnalyzer();
     this.pubDevClient = new PubDevClient(context);
     this.githubClient = new GitHubClient(context);
+    this.recommendationEngine = new RecommendationEngine(context);
 
     // Initialize VersionSyncService with workspace root
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
@@ -224,6 +230,19 @@ export class DashboardPanel implements vscode.Disposable {
 
       case 'updateAllOutdated':
         await this.handleUpdateAllOutdated();
+        break;
+
+      case 'generateRecommendations':
+        await this.handleGenerateRecommendations();
+        break;
+
+      case 'applyRecommendation':
+        if (message.dependencyName && message.newVersion) {
+          await this.handleApplyRecommendation(
+            message.dependencyName,
+            message.newVersion
+          );
+        }
         break;
     }
   }
@@ -813,6 +832,89 @@ export class DashboardPanel implements vscode.Disposable {
   }
 
   /**
+   * Handle generating intelligent recommendations
+   */
+  private async handleGenerateRecommendations(): Promise<void> {
+    if (this.isGeneratingRecommendations || this.packages.length === 0) {
+      return;
+    }
+
+    this.isGeneratingRecommendations = true;
+    await this.updateWebview();
+
+    try {
+      this.recommendations = await this.recommendationEngine.generateRecommendations(
+        this.packages
+      );
+
+      const actionableCount = this.recommendations.recommendations.filter(
+        r => r.priority !== 'info'
+      ).length;
+
+      if (actionableCount > 0) {
+        vscode.window.showInformationMessage(
+          `Generated ${actionableCount} upgrade recommendation(s)`
+        );
+      } else {
+        vscode.window.showInformationMessage(
+          'All dependencies are up to date and optimally configured!'
+        );
+      }
+    } catch (error) {
+      vscode.window.showErrorMessage(`Failed to generate recommendations: ${error}`);
+    } finally {
+      this.isGeneratingRecommendations = false;
+      await this.updateWebview();
+    }
+  }
+
+  /**
+   * Handle applying a single recommendation
+   */
+  private async handleApplyRecommendation(
+    dependencyName: string,
+    newVersion: string
+  ): Promise<void> {
+    const response = await vscode.window.showInformationMessage(
+      `Update ${dependencyName} to ^${newVersion}?`,
+      { modal: true },
+      'Update',
+      'Cancel'
+    );
+
+    if (response !== 'Update') {
+      return;
+    }
+
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: `Updating ${dependencyName}...`,
+        cancellable: false,
+      },
+      async () => {
+        const result = await this.versionSyncService.updateDependencyVersion(
+          dependencyName,
+          `^${newVersion}`,
+          this.packages
+        );
+
+        if (result.success) {
+          vscode.window.showInformationMessage(
+            `Updated ${dependencyName} to ^${newVersion} in ${result.filesUpdated.length} file(s)`
+          );
+          // Clear recommendations to prompt regeneration
+          this.recommendations = undefined;
+          await vscode.commands.executeCommand('pubspecMaster.refresh');
+        } else {
+          const errorMsg = result.errors.map((e) => `${e.file}: ${e.error}`).join('\n');
+          vscode.window.showErrorMessage(`Failed to update: ${errorMsg}`);
+        }
+      }
+    );
+  }
+
+  /**
    * Format backup timestamp for display
    */
   private formatBackupTimestamp(timestamp: string): string {
@@ -860,7 +962,10 @@ export class DashboardPanel implements vscode.Disposable {
         outdatedPackages: this.outdatedPackages,
         isCheckingUpdates: this.isCheckingUpdates,
         isOnline: this.pubDevClient.getOnlineStatus(),
+        lastSyncTime: this.pubDevClient.getLastSyncTime(),
         selectionContext: this.selectionContext,  // Label for what's selected in tree view
+        recommendations: this.recommendations,
+        isGeneratingRecommendations: this.isGeneratingRecommendations,
       },
     });
   }
@@ -1110,6 +1215,110 @@ export class DashboardPanel implements vscode.Disposable {
     }
 
     .offline-banner.visible { display: flex; }
+    .offline-banner .last-sync { margin-left: auto; font-size: 12px; color: var(--pm-neutral); }
+    .offline-banner .btn-small { padding: 4px 10px; font-size: 12px; }
+
+    /* Search and Filter Bar */
+    .search-filter-bar {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 200px;
+      max-width: 400px;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-box .search-icon {
+      position: absolute;
+      left: 12px;
+      color: var(--pm-neutral);
+      pointer-events: none;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 10px 36px;
+      border: 1px solid var(--pm-border);
+      border-radius: 6px;
+      background-color: var(--pm-surface);
+      color: var(--pm-text);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-box input:focus {
+      border-color: var(--pm-primary);
+    }
+
+    .search-box input::placeholder {
+      color: var(--pm-neutral);
+    }
+
+    .search-clear {
+      position: absolute;
+      right: 8px;
+      background: none;
+      border: none;
+      color: var(--pm-neutral);
+      cursor: pointer;
+      padding: 4px 8px;
+      font-size: 14px;
+      border-radius: 4px;
+    }
+
+    .search-clear:hover {
+      background-color: var(--vscode-toolbar-hoverBackground);
+      color: var(--pm-text);
+    }
+
+    .filter-chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .filter-chip {
+      padding: 6px 14px;
+      border: 1px solid var(--pm-border);
+      border-radius: 16px;
+      background-color: var(--pm-surface);
+      color: var(--pm-text);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-chip:hover {
+      border-color: var(--pm-primary);
+    }
+
+    .filter-chip.active {
+      background-color: var(--pm-primary);
+      color: var(--vscode-button-foreground);
+      border-color: var(--pm-primary);
+    }
+
+    .no-results {
+      text-align: center;
+      padding: 40px;
+      color: var(--pm-neutral);
+    }
+
+    .no-results-icon { font-size: 48px; margin-bottom: 16px; }
+
+    .highlight {
+      background-color: rgba(255, 235, 59, 0.3);
+      border-radius: 2px;
+    }
 
     .promo-banner {
       background: linear-gradient(90deg, var(--pm-primary) 0%, #6366f1 100%);
@@ -1213,6 +1422,114 @@ export class DashboardPanel implements vscode.Disposable {
       font-style: italic;
       margin-left: 4px;
     }
+
+    /* Recommendations styles */
+    .recommendations-summary {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      font-size: 13px;
+      color: var(--pm-neutral);
+    }
+    .recommendations-summary .sdk-info {
+      padding: 4px 10px;
+      background-color: var(--pm-surface);
+      border-radius: 4px;
+      border: 1px solid var(--pm-border);
+    }
+    .recommendation-item {
+      display: flex;
+      align-items: flex-start;
+      padding: 16px;
+      border-bottom: 1px solid var(--pm-border);
+      gap: 12px;
+    }
+    .recommendation-item:last-child { border-bottom: none; }
+    .recommendation-item:hover { background-color: var(--vscode-list-hoverBackground); }
+    .recommendation-score {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .recommendation-score.excellent { background-color: rgba(76, 175, 80, 0.2); color: var(--pm-success); }
+    .recommendation-score.good { background-color: rgba(33, 150, 243, 0.2); color: #2196F3; }
+    .recommendation-score.fair { background-color: rgba(255, 152, 0, 0.2); color: var(--pm-warning); }
+    .recommendation-score.poor { background-color: rgba(244, 67, 54, 0.2); color: var(--pm-error); }
+    .recommendation-content { flex: 1; min-width: 0; }
+    .recommendation-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .recommendation-name { font-weight: 600; font-size: 14px; }
+    .recommendation-version {
+      font-size: 12px;
+      color: var(--pm-neutral);
+      font-family: monospace;
+    }
+    .recommendation-version .arrow { color: var(--pm-success); margin: 0 4px; }
+    .recommendation-reason { font-size: 13px; margin-bottom: 6px; }
+    .recommendation-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--pm-neutral);
+    }
+    .recommendation-meta span {
+      padding: 2px 6px;
+      background-color: var(--pm-surface);
+      border-radius: 3px;
+    }
+    .recommendation-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .badge.priority-critical { background-color: rgba(244, 67, 54, 0.2); color: var(--pm-error); }
+    .badge.priority-high { background-color: rgba(255, 152, 0, 0.2); color: var(--pm-warning); }
+    .badge.priority-medium { background-color: rgba(33, 150, 243, 0.2); color: #2196F3; }
+    .badge.priority-low { background-color: rgba(158, 158, 158, 0.2); color: var(--pm-neutral); }
+    .score-breakdown {
+      display: none;
+      margin-top: 8px;
+      padding: 8px;
+      background-color: var(--pm-surface);
+      border-radius: 4px;
+      font-size: 11px;
+    }
+    .recommendation-item:hover .score-breakdown { display: block; }
+    .score-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 4px 0;
+    }
+    .score-bar-label { width: 80px; }
+    .score-bar-track {
+      flex: 1;
+      height: 6px;
+      background-color: var(--pm-border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+    .score-bar-fill.high { background-color: var(--pm-success); }
+    .score-bar-fill.medium { background-color: var(--pm-warning); }
+    .score-bar-fill.low { background-color: var(--pm-error); }
+    .score-bar-value { width: 30px; text-align: right; }
   </style>
 </head>
 <body>
@@ -1226,6 +1543,24 @@ export class DashboardPanel implements vscode.Disposable {
   <div id="offline-banner" class="offline-banner">
     <span>&#9888;</span>
     <span>Offline mode - using cached data</span>
+    <span id="last-sync" class="last-sync"></span>
+    <button class="btn btn-secondary btn-small" id="btn-retry-connection">Retry</button>
+  </div>
+
+  <div class="search-filter-bar">
+    <div class="search-box">
+      <span class="search-icon">&#128269;</span>
+      <input type="text" id="search-input" placeholder="Search packages, dependencies... (Cmd+F)" autocomplete="off" />
+      <button class="search-clear" id="search-clear" style="display: none;">&#10005;</button>
+    </div>
+    <div class="filter-chips" id="filter-chips">
+      <button class="filter-chip active" data-filter="all">All</button>
+      <button class="filter-chip" data-filter="flutter_app">Apps</button>
+      <button class="filter-chip" data-filter="flutter_plugin">Plugins</button>
+      <button class="filter-chip" data-filter="flutter_package">Flutter Packages</button>
+      <button class="filter-chip" data-filter="dart_package">Dart Packages</button>
+      <button class="filter-chip" data-filter="issues">With Issues</button>
+    </div>
   </div>
 
   <div class="header">
@@ -1249,6 +1584,9 @@ export class DashboardPanel implements vscode.Disposable {
       </button>
       <button class="btn btn-secondary" id="btn-check-updates">
         <span>&#128270;</span> Check Updates
+      </button>
+      <button class="btn btn-primary" id="btn-recommendations">
+        <span>&#129302;</span> Smart Recommendations
       </button>
       <button class="btn btn-secondary" id="btn-analyze">
         <span>&#128269;</span> Analyze
@@ -1297,6 +1635,14 @@ export class DashboardPanel implements vscode.Disposable {
       <h2 class="section-title">&#9888; Package Health Warnings</h2>
     </div>
     <div class="issues-list" id="health-list"></div>
+  </div>
+
+  <div class="section" id="recommendations-section" style="display: none;">
+    <div class="section-header">
+      <h2 class="section-title">&#129302; Smart Upgrade Recommendations</h2>
+      <div class="recommendations-summary" id="recommendations-summary"></div>
+    </div>
+    <div class="issues-list" id="recommendations-list"></div>
   </div>
 
   <div class="section">
@@ -1381,6 +1727,10 @@ export class DashboardPanel implements vscode.Disposable {
       vscode.postMessage({ command: 'checkUpdates' });
     });
 
+    document.getElementById('btn-recommendations').addEventListener('click', function() {
+      vscode.postMessage({ command: 'generateRecommendations' });
+    });
+
     document.getElementById('btn-update-all').addEventListener('click', function() {
       vscode.postMessage({ command: 'updateAllOutdated' });
     });
@@ -1388,6 +1738,112 @@ export class DashboardPanel implements vscode.Disposable {
     document.getElementById('btn-show-all').addEventListener('click', function() {
       vscode.postMessage({ command: 'showAll' });
     });
+
+    document.getElementById('btn-retry-connection').addEventListener('click', function() {
+      vscode.postMessage({ command: 'refresh' });
+    });
+
+    // Search functionality
+    var currentSearchTerm = '';
+    var currentFilter = 'all';
+    var allPackagesData = [];
+    var allAnalysisData = null;
+
+    var searchInput = document.getElementById('search-input');
+    var searchClear = document.getElementById('search-clear');
+
+    searchInput.addEventListener('input', function(e) {
+      currentSearchTerm = e.target.value.toLowerCase();
+      searchClear.style.display = currentSearchTerm ? 'block' : 'none';
+      applyFilters();
+    });
+
+    searchClear.addEventListener('click', function() {
+      searchInput.value = '';
+      currentSearchTerm = '';
+      searchClear.style.display = 'none';
+      applyFilters();
+    });
+
+    // Keyboard shortcut (Cmd+F / Ctrl+F)
+    document.addEventListener('keydown', function(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault();
+        searchInput.focus();
+        searchInput.select();
+      }
+      // Escape to clear search
+      if (e.key === 'Escape' && document.activeElement === searchInput) {
+        searchInput.value = '';
+        currentSearchTerm = '';
+        searchClear.style.display = 'none';
+        searchInput.blur();
+        applyFilters();
+      }
+    });
+
+    // Filter chips
+    document.querySelectorAll('.filter-chip').forEach(function(chip) {
+      chip.addEventListener('click', function() {
+        document.querySelectorAll('.filter-chip').forEach(function(c) {
+          c.classList.remove('active');
+        });
+        chip.classList.add('active');
+        currentFilter = chip.dataset.filter;
+        applyFilters();
+      });
+    });
+
+    function applyFilters() {
+      var filteredPackages = allPackagesData.filter(function(pkg) {
+        // Apply search term
+        if (currentSearchTerm) {
+          var searchable = pkg.name.toLowerCase() + ' ' + (pkg.type || '').toLowerCase();
+          if (!searchable.includes(currentSearchTerm)) {
+            return false;
+          }
+        }
+
+        // Apply type filter
+        if (currentFilter === 'all') {
+          return true;
+        } else if (currentFilter === 'issues') {
+          // Show packages that have conflicts or health issues
+          return hasIssues(pkg.name);
+        } else {
+          return pkg.type === currentFilter;
+        }
+      });
+
+      renderPackages(filteredPackages);
+      updateFilterCounts();
+    }
+
+    function hasIssues(packageName) {
+      if (!allAnalysisData) return false;
+      var conflicts = allAnalysisData.conflicts || [];
+      var healthIssues = allAnalysisData.healthIssues || [];
+
+      // Check if package is involved in any conflict
+      var inConflict = conflicts.some(function(c) {
+        return c.packages.some(function(p) { return p.packageName === packageName; });
+      });
+      if (inConflict) return true;
+
+      // Check if any dependency used by this package has health issues
+      var pkg = allPackagesData.find(function(p) { return p.name === packageName; });
+      if (pkg && healthIssues.length > 0) {
+        // For now, just check if there are any health issues at all for this package's deps
+        return healthIssues.some(function(h) {
+          return h.usedBy && h.usedBy.includes(packageName);
+        });
+      }
+      return false;
+    }
+
+    function updateFilterCounts() {
+      // Update filter chip counts (optional enhancement)
+    }
 
     // Message handlers
     window.addEventListener('message', function(event) {
@@ -1398,6 +1854,10 @@ export class DashboardPanel implements vscode.Disposable {
     });
 
     function updateUI(data) {
+      // Store data for filtering
+      allPackagesData = data.packages;
+      allAnalysisData = data.analysis;
+
       // Update selection context badge and show all button
       const selectionBadge = document.getElementById('selection-badge');
       const showAllBtn = document.getElementById('btn-show-all');
@@ -1421,9 +1881,13 @@ export class DashboardPanel implements vscode.Disposable {
       const conflictCount = data.analysis?.conflicts?.length || 0;
       conflictsCard.className = 'stat-card' + (conflictCount > 0 ? ' error' : ' success');
 
-      // Update offline banner
+      // Update offline banner with last sync time
       const offlineBanner = document.getElementById('offline-banner');
       offlineBanner.className = data.isOnline ? 'offline-banner' : 'offline-banner visible';
+      if (!data.isOnline && data.lastSyncTime) {
+        const lastSyncEl = document.getElementById('last-sync');
+        lastSyncEl.textContent = 'Last sync: ' + new Date(data.lastSyncTime).toLocaleTimeString();
+      }
 
       // Update outdated packages stat and section
       renderOutdatedPackages(data.outdatedPackages, data.isCheckingUpdates);
@@ -1434,8 +1898,11 @@ export class DashboardPanel implements vscode.Disposable {
       // Update health issues (Package Health Warnings section)
       renderHealthIssues(data.analysis?.healthIssues || []);
 
-      // Update package list using DOM methods (safe)
-      renderPackages(data.packages);
+      // Update recommendations section
+      renderRecommendations(data.recommendations, data.isGeneratingRecommendations);
+
+      // Apply current filters to packages
+      applyFilters();
     }
 
     function renderOutdatedPackages(outdatedPackages, isCheckingUpdates) {
@@ -1896,6 +2363,252 @@ export class DashboardPanel implements vscode.Disposable {
       healthList.appendChild(promoDiv);
     }
 
+    function renderRecommendations(recommendations, isGenerating) {
+      const section = document.getElementById('recommendations-section');
+      const list = document.getElementById('recommendations-list');
+      const summary = document.getElementById('recommendations-summary');
+      const btn = document.getElementById('btn-recommendations');
+
+      // Clear existing content
+      while (list.firstChild) {
+        list.removeChild(list.firstChild);
+      }
+      while (summary.firstChild) {
+        summary.removeChild(summary.firstChild);
+      }
+
+      // Handle loading state
+      if (isGenerating) {
+        section.style.display = 'block';
+        btn.disabled = true;
+        while (btn.firstChild) {
+          btn.removeChild(btn.firstChild);
+        }
+        btn.appendChild(document.createTextNode('Analyzing...'));
+
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'empty-state';
+        loadingDiv.textContent = 'Analyzing dependencies and generating recommendations...';
+        list.appendChild(loadingDiv);
+        return;
+      }
+
+      // Reset button
+      btn.disabled = false;
+      while (btn.firstChild) {
+        btn.removeChild(btn.firstChild);
+      }
+      const btnIcon = document.createElement('span');
+      btnIcon.textContent = '\\u{1F916}';
+      btn.appendChild(btnIcon);
+      btn.appendChild(document.createTextNode(' Smart Recommendations'));
+
+      // Hide section if no recommendations
+      if (!recommendations) {
+        section.style.display = 'none';
+        return;
+      }
+
+      section.style.display = 'block';
+
+      // Render summary
+      if (recommendations.installedSdk) {
+        const sdkInfo = document.createElement('span');
+        sdkInfo.className = 'sdk-info';
+        sdkInfo.textContent = 'SDK: Dart ' + (recommendations.installedSdk.dart || 'unknown') +
+          (recommendations.installedSdk.flutter ? ' / Flutter ' + recommendations.installedSdk.flutter : '');
+        summary.appendChild(sdkInfo);
+      }
+
+      var summaryText = recommendations.summary.upgradeAvailable + ' upgrades available';
+      if (recommendations.summary.incompatibleUpgrades > 0) {
+        summaryText += ', ' + recommendations.summary.incompatibleUpgrades + ' incompatible with your SDK';
+      }
+      if (recommendations.summary.conflicts > 0) {
+        summaryText += ', ' + recommendations.summary.conflicts + ' conflicts';
+      }
+      const summarySpan = document.createElement('span');
+      summarySpan.textContent = summaryText;
+      summary.appendChild(summarySpan);
+
+      // Filter to actionable recommendations (not info)
+      const actionable = recommendations.recommendations.filter(function(r) {
+        return r.priority !== 'info';
+      });
+
+      if (actionable.length === 0) {
+        const emptyState = document.createElement('div');
+        emptyState.className = 'empty-state';
+        const emptyIcon = createTextElement('div', '\\u2705', 'empty-state-icon');
+        const emptyText = createTextElement('div', 'All dependencies are optimally configured!');
+        emptyState.appendChild(emptyIcon);
+        emptyState.appendChild(emptyText);
+        list.appendChild(emptyState);
+        return;
+      }
+
+      // Render each recommendation
+      actionable.forEach(function(item) {
+        const rec = item.recommendation;
+        const priority = item.priority;
+
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'recommendation-item';
+
+        // Score circle
+        const scoreDiv = document.createElement('div');
+        var scoreClass = 'recommendation-score ';
+        var score = rec.score ? rec.score.overall : 50;
+        if (score >= 85) {
+          scoreClass += 'excellent';
+        } else if (score >= 70) {
+          scoreClass += 'good';
+        } else if (score >= 50) {
+          scoreClass += 'fair';
+        } else {
+          scoreClass += 'poor';
+        }
+        scoreDiv.className = scoreClass;
+        scoreDiv.textContent = score;
+        scoreDiv.title = 'Overall score: ' + score + '/100';
+        itemDiv.appendChild(scoreDiv);
+
+        // Content
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'recommendation-content';
+
+        // Header with name and badges
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'recommendation-header';
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'recommendation-name';
+        nameSpan.textContent = rec.name;
+        headerDiv.appendChild(nameSpan);
+
+        // Priority badge
+        const priorityBadge = createTextElement('span', priority, 'badge priority-' + priority);
+        headerDiv.appendChild(priorityBadge);
+
+        // Action badge
+        var actionText = rec.action;
+        if (rec.action === 'upgrade') {
+          actionText = '\\u2B06 upgrade';
+        } else if (rec.action === 'incompatible') {
+          actionText = '\\u26A0 SDK incompatible';
+        } else if (rec.action === 'keep') {
+          actionText = '\\u2714 up to date';
+        }
+        const actionBadge = createTextElement('span', actionText, 'badge');
+        headerDiv.appendChild(actionBadge);
+
+        contentDiv.appendChild(headerDiv);
+
+        // Version info
+        if (rec.recommendedVersion || rec.latestVersion) {
+          const versionDiv = document.createElement('div');
+          versionDiv.className = 'recommendation-version';
+
+          var versionText = rec.currentVersion;
+          if (rec.recommendedVersion && rec.recommendedVersion !== rec.currentVersion.replace(/^\\^/, '')) {
+            versionText += ' \\u2192 ^' + rec.recommendedVersion;
+          } else if (rec.latestVersion && rec.action === 'incompatible') {
+            versionText += ' (latest: ' + rec.latestVersion + ')';
+          }
+          versionDiv.textContent = versionText;
+          contentDiv.appendChild(versionDiv);
+        }
+
+        // Reason
+        const reasonDiv = createTextElement('div', rec.reason, 'recommendation-reason');
+        contentDiv.appendChild(reasonDiv);
+
+        // Meta info (used by)
+        if (rec.usedBy && rec.usedBy.length > 0) {
+          const metaDiv = document.createElement('div');
+          metaDiv.className = 'recommendation-meta';
+          const usedBySpan = document.createElement('span');
+          usedBySpan.textContent = 'Used by: ' + rec.usedBy.join(', ');
+          metaDiv.appendChild(usedBySpan);
+          contentDiv.appendChild(metaDiv);
+        }
+
+        // Score breakdown (shown on hover)
+        if (rec.score && rec.score.breakdown) {
+          const breakdownDiv = document.createElement('div');
+          breakdownDiv.className = 'score-breakdown';
+
+          var breakdownItems = [
+            { label: 'Compatibility', value: rec.score.breakdown.compatibility.raw },
+            { label: 'Risk', value: rec.score.breakdown.risk.raw },
+            { label: 'Freshness', value: rec.score.breakdown.freshness.raw },
+            { label: 'Community', value: rec.score.breakdown.community.raw }
+          ];
+
+          breakdownItems.forEach(function(bi) {
+            const barDiv = document.createElement('div');
+            barDiv.className = 'score-bar';
+
+            const labelSpan = createTextElement('span', bi.label, 'score-bar-label');
+            barDiv.appendChild(labelSpan);
+
+            const trackDiv = document.createElement('div');
+            trackDiv.className = 'score-bar-track';
+
+            const fillDiv = document.createElement('div');
+            fillDiv.className = 'score-bar-fill ' + (bi.value >= 70 ? 'high' : bi.value >= 40 ? 'medium' : 'low');
+            fillDiv.style.width = bi.value + '%';
+            trackDiv.appendChild(fillDiv);
+            barDiv.appendChild(trackDiv);
+
+            const valueSpan = createTextElement('span', bi.value, 'score-bar-value');
+            barDiv.appendChild(valueSpan);
+
+            breakdownDiv.appendChild(barDiv);
+          });
+
+          contentDiv.appendChild(breakdownDiv);
+        }
+
+        itemDiv.appendChild(contentDiv);
+
+        // Actions
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'recommendation-actions';
+
+        // Apply button for upgrades
+        if (rec.action === 'upgrade' && rec.recommendedVersion) {
+          const applyBtn = document.createElement('button');
+          applyBtn.className = 'fix-btn';
+          applyBtn.textContent = 'Apply';
+          applyBtn.title = 'Update to ^' + rec.recommendedVersion;
+          applyBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            vscode.postMessage({
+              command: 'applyRecommendation',
+              dependencyName: rec.name,
+              newVersion: rec.recommendedVersion
+            });
+          });
+          actionsDiv.appendChild(applyBtn);
+        }
+
+        // View on pub.dev button
+        const viewBtn = document.createElement('button');
+        viewBtn.className = 'fix-btn fix-btn-secondary';
+        viewBtn.textContent = 'pub.dev';
+        viewBtn.title = 'View on pub.dev';
+        viewBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          window.open('https://pub.dev/packages/' + encodeURIComponent(rec.name), '_blank');
+        });
+        actionsDiv.appendChild(viewBtn);
+
+        itemDiv.appendChild(actionsDiv);
+        list.appendChild(itemDiv);
+      });
+    }
+
     function renderPackages(packages) {
       const container = document.getElementById('package-list');
       // Clear existing content
@@ -1905,11 +2618,35 @@ export class DashboardPanel implements vscode.Disposable {
 
       if (packages.length === 0) {
         const emptyState = document.createElement('div');
-        emptyState.className = 'empty-state';
-        const emptyIcon = createTextElement('div', '\\u{1F4E6}', 'empty-state-icon');
-        const emptyText = createTextElement('div', 'No packages found');
+        emptyState.className = currentSearchTerm || currentFilter !== 'all' ? 'no-results' : 'empty-state';
+        const emptyIcon = createTextElement('div', currentSearchTerm ? '\\u{1F50D}' : '\\u{1F4E6}', currentSearchTerm ? 'no-results-icon' : 'empty-state-icon');
+        var emptyMessage = 'No packages found';
+        if (currentSearchTerm) {
+          emptyMessage = 'No packages match "' + currentSearchTerm + '"';
+        } else if (currentFilter !== 'all') {
+          emptyMessage = 'No ' + currentFilter.replace('_', ' ') + 's found';
+        }
+        const emptyText = createTextElement('div', emptyMessage);
         emptyState.appendChild(emptyIcon);
         emptyState.appendChild(emptyText);
+        if (currentSearchTerm || currentFilter !== 'all') {
+          const clearBtn = document.createElement('button');
+          clearBtn.className = 'btn btn-secondary';
+          clearBtn.textContent = 'Clear filters';
+          clearBtn.style.marginTop = '16px';
+          clearBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            currentSearchTerm = '';
+            searchClear.style.display = 'none';
+            currentFilter = 'all';
+            document.querySelectorAll('.filter-chip').forEach(function(c) {
+              c.classList.remove('active');
+            });
+            document.querySelector('.filter-chip[data-filter="all"]').classList.add('active');
+            applyFilters();
+          });
+          emptyState.appendChild(clearBtn);
+        }
         container.appendChild(emptyState);
         return;
       }
@@ -1927,6 +2664,9 @@ export class DashboardPanel implements vscode.Disposable {
         } else if (pkg.type === 'flutter_plugin') {
           typeIcon = '\\u{1F50C}';
           typeLabel = 'Plugin';
+        } else if (pkg.type === 'flutter_package') {
+          typeIcon = '\\u{1F4E6}';
+          typeLabel = 'Flutter Package';
         }
 
         const iconDiv = createTextElement('div', typeIcon, 'package-icon ' + iconClass);

@@ -53,7 +53,7 @@ export interface PackageInfo {
   version?: string;
   path: string;
   relativePath: string;
-  type: 'flutter_app' | 'dart_package' | 'flutter_plugin';
+  type: 'flutter_app' | 'flutter_package' | 'dart_package' | 'flutter_plugin';
   sdkConstraint?: string;
   hasResolutionWorkspace: boolean;
   dependencyCount: number;

@@ -114,7 +114,7 @@ export class MultiEcosystemScanner implements vscode.Disposable {
 
     // Scan for each ecosystem
     for (const adapter of adapters) {
-      if (!adapter) continue;
+      if (!adapter) {continue;}
 
       const ecosystemPackages: IPackageInfo[] = [];
 
@@ -266,7 +266,7 @@ export class MultiEcosystemScanner implements vscode.Disposable {
       : ecosystemRegistry.getAllAdapters();
 
     for (const adapter of adapters) {
-      if (!adapter) continue;
+      if (!adapter) {continue;}
 
       for (const pattern of adapter.manifestPatterns) {
         const watcher = vscode.workspace.createFileSystemWatcher(pattern);

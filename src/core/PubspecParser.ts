@@ -108,12 +108,18 @@ export class PubspecParser {
 
   /**
    * Detect the package type from parsed pubspec content
+   *
+   * Priority order:
+   * 1. flutter_plugin - has flutter.plugin section
+   * 2. flutter_app - has flutter dep + (publish_to: none OR uses-material-design)
+   * 3. flutter_package - has flutter dep (but not app/plugin)
+   * 4. dart_package - no flutter dependency
    */
   private detectPackageType(parsed: Record<string, unknown>): PackageType {
     const flutter = parsed.flutter as Record<string, unknown> | undefined;
     const deps = parsed.dependencies as Record<string, unknown> | undefined;
 
-    // Check for Flutter plugin - most specific first
+    // 1. Check for Flutter plugin - most specific first
     if (flutter?.plugin) {
       return 'flutter_plugin';
     }
@@ -126,16 +132,16 @@ export class PubspecParser {
       const publishTo = parsed.publish_to;
       const usesMaterialDesign = flutter?.['uses-material-design'];
 
-      // Apps typically have publish_to: none and uses-material-design: true
+      // 2. Apps typically have publish_to: none and uses-material-design: true
       if (publishTo === 'none' || usesMaterialDesign === true) {
         return 'flutter_app';
       }
 
-      // Has Flutter dependency but no clear app indicators - treat as package
-      // (Flutter packages also depend on flutter SDK)
+      // 3. Has Flutter dependency but no app/plugin indicators = Flutter package
+      return 'flutter_package';
     }
 
-    // Default to Dart package
+    // 4. No Flutter dependency = pure Dart package
     return 'dart_package';
   }
 

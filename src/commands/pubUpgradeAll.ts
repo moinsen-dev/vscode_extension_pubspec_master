@@ -54,7 +54,7 @@ export async function pubUpgradeAllCommand(
           increment: 100 / packages.length,
         });
 
-        const isFlutter = pkg.type === 'flutter_app' || pkg.type === 'flutter_plugin';
+        const isFlutter = pkg.type === 'flutter_app' || pkg.type === 'flutter_plugin' || pkg.type === 'flutter_package';
         const result = await runPubCommandInTerminal(pkg.directory, isFlutter, 'upgrade', pkg.name);
 
         if (result.exitCode !== 0) {
